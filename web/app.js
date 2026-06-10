@@ -4,16 +4,23 @@
   // --- Navigation ---
   const navButtons = document.querySelectorAll('nav button[data-view]');
   const views = document.querySelectorAll('.view');
+
+  function switchView(view) {
+    navButtons.forEach((b) => b.classList.toggle('active', b.dataset.view === view));
+    views.forEach((v) => v.classList.remove('active'));
+    document.getElementById(`view-${view}`).classList.add('active');
+    if (view === 'lists') {
+      loadWordLists();
+    }
+  }
+
   navButtons.forEach((btn) => {
-    btn.addEventListener('click', () => {
-      navButtons.forEach((b) => b.classList.remove('active'));
-      views.forEach((v) => v.classList.remove('active'));
-      btn.classList.add('active');
-      document.getElementById(`view-${btn.dataset.view}`).classList.add('active');
-      if (btn.dataset.view === 'lists') {
-        loadWordLists();
-      }
-    });
+    btn.addEventListener('click', () => switchView(btn.dataset.view));
+  });
+
+  // In-page links (e.g. on the About page) that jump to another view.
+  document.querySelectorAll('[data-view-link]').forEach((btn) => {
+    btn.addEventListener('click', () => switchView(btn.dataset.viewLink));
   });
 
   // --- API helper ---

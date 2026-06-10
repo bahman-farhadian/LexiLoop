@@ -15,6 +15,7 @@
       <button data-view="practice" class="active">Practice</button>
       <button data-view="report">Report</button>
       <button data-view="lists">Word Lists</button>
+      <button data-view="about">About</button>
     </nav>
   </header>
 
@@ -166,6 +167,69 @@
             and re-syncs the database (the source of truth).
           </p>
         </div>
+      </div>
+    </section>
+
+    <!-- About -->
+    <section id="view-about" class="view">
+      <div class="card">
+        <h2>About LexiLoop</h2>
+        <p>
+          LexiLoop is a self-hosted, Memrise-style vocabulary trainer, written
+          by <strong>Bahman Farhadian</strong>. It keeps everything &mdash;
+          your word lists, scores, and practice history &mdash; in a single
+          local SQLite database that you fully own and control.
+        </p>
+        <p>
+          Unlike Memrise, there's no account, no cloud, and no pre-recorded
+          audio to wait for: every word is spoken on the fly using your
+          browser's built-in text-to-speech (or <code>say</code> on macOS for
+          the CLI), in the right language automatically. Just write your own
+          word list as a simple JSON file and start practicing.
+        </p>
+
+        <h3>How practice works</h3>
+        <p>
+          Every word has a score from <strong>1.0</strong> (struggling) to
+          <strong>9.0</strong> (mastered). The score decides what kind of
+          question you get &mdash; Learning, Audio, or Meaning &mdash; so a
+          single session naturally mixes new words with ones you're
+          reviewing. Get it right and the score goes up (and the question
+          gets harder); get it wrong and it drops back down. See the
+          <button class="link-btn" data-view-link="report">Report</button>
+          tab for your history, or read the full scoring breakdown in the
+          project's README.
+        </p>
+
+        <h3>The database is the source of truth</h3>
+        <p>
+          The CLI (<code>lexiloop.sh</code>) and this web UI
+          (<code>lexiloop_web.sh</code>) both read and write the exact same
+          <code>data/lexiloop.db</code> SQLite file. Every answer updates the
+          database immediately, and ending a session &mdash; whether by
+          clicking <strong>!!</strong> here, pressing <code>Ctrl+C</code> in
+          the terminal, or letting a session finish naturally &mdash; writes
+          the session summary to the database too. You can freely switch
+          between the CLI and the web UI; nothing is ever lost.
+        </p>
+
+        <h3>Customizing your word lists</h3>
+        <p>
+          Use the <button class="link-btn" data-view-link="lists">Word
+          Lists</button> tab to create a new list and edit its words and
+          definitions directly &mdash; no JSON editing required. Each word
+          can have up to two definitions (e.g. an English meaning and a
+          German one), and German nouns written with their article
+          (<code>der</code>/<code>die</code>/<code>das</code>) are
+          color-coded by gender automatically.
+        </p>
+
+        <h3>This web UI</h3>
+        <p>
+          Runs entirely on <code>127.0.0.1:9999</code> &mdash; standard
+          library Python only, no external dependencies, no data ever leaves
+          your machine.
+        </p>
       </div>
     </section>
   </main>
