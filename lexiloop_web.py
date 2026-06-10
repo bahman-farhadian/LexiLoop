@@ -335,6 +335,47 @@ def report_data(user, lang=None):
     return reports
 
 
+def load_word_list(user, lang):
+    path = ll.word_list_path(user, lang)
+    if not os.path.exists(path):
+        return []
+    with open(path, encoding='utf-8') as f:
+        data = json.load(f)
+    words = []
+    for entry in data:
+        definition = entry.get('definition') or []
+        if isinstance(definition, str):
+            definition = [definition] if definition else []
+        words.append({
+            'word': entry.get('word', ''),
+            'def1': definition[0] if len(definition) > 0 else '',
+            'def2': definition[1] if len(definition) > 1 else '',
+        })
+    return words
+
+
+def save_word_list(user, lang, items):
+    path = ll.word_list_path(user, lang)
+    data = []
+    for item in items:
+        word = str(item.get('word', '')).strip()
+        if not word:
+            continue
+        defs = [str(item.get(f, '')).strip() for f in ('def1', 'def2')]
+        defs = [d for d in defs if d]
+        entry = {'word': word}
+        if len(defs) == 1:
+            entry['definition'] = defs[0]
+        elif len(defs) > 1:
+            entry['definition'] = defs
+        data.append(entry)
+    os.makedirs(ll.WORD_LISTS_DIR, exist_ok=True)
+    with open(path, 'w', encoding='utf-8') as f:
+        json.dump(data, f, indent=2, ensure_ascii=False)
+    ll.sync_word_list(user, lang)
+    return path, len(data)
+
+
 def init_word_list(user, lang):
     os.makedirs(ll.WORD_LISTS_DIR, exist_ok=True)
     path = ll.word_list_path(user, lang)
@@ -407,6 +448,17 @@ class Handler(http.server.BaseHTTPRequestHandler):
             except ValueError as e:
                 return self._send_json({'error': str(e)}, 400)
 
+        if parsed.path == '/api/wordlist':
+            qs = urllib.parse.parse_qs(parsed.query)
+            user = qs.get('user', [''])[0]
+            lang = qs.get('lang', [''])[0]
+            if not user or not lang:
+                return self._send_json({'error': "'user' and 'lang' are required"}, 400)
+            try:
+                return self._send_json({'words': load_word_list(user, lang)})
+            except ValueError as e:
+                return self._send_json({'error': str(e)}, 400)
+
         self.send_error(404)
 
     def do_POST(self):
@@ -443,6 +495,18 @@ class Handler(http.server.BaseHTTPRequestHandler):
                 'progress': {'current': 1, 'total': session['total']},
                 'question': question,
             })
+
+        if parsed.path == '/api/wordlist':
+            user = str(payload.get('user', '')).strip()
+            lang = str(payload.get('lang', '')).strip()
+            words = payload.get('words', [])
+            if not user or not lang:
+                return self._send_json({'error': "'user' and 'lang' are required"}, 400)
+            try:
+                path, count = save_word_list(user, lang, words)
+            except ValueError as e:
+                return self._send_json({'error': str(e)}, 400)
+            return self._send_json({'saved': True, 'path': path, 'count': count})
 
         if parsed.path == '/api/practice/answer':
             session_id = payload.get('session_id')

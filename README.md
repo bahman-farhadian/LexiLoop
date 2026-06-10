@@ -32,29 +32,22 @@ flash-and-hide spelling test for "Learning", and the listening test for
 points for whichever band it's in.
 
 ```mermaid
-stateDiagram-v2
-    [*] --> Learning : new word (score 1.0)
+flowchart LR
+    L["Learning\nscore 1-3"]
+    A["Audio\nscore 4-6"]
+    M["Meaning\nscore 7-9"]
 
-    state "Learning (1-3)" as Learning
-    state "Audio (4-6)" as Audio
-    state "Meaning (7-9)" as Meaning
-
-    Learning --> Learning : answer (+1 / -2)
-    Audio --> Audio : answer (+2 / -2)
-    Meaning --> Meaning : answer (+3, capped 9 / -2)
-
-    Learning --> Audio : score rises to 4+
-    Audio --> Meaning : score rises to 7+
-    Audio --> Learning : score drops to 3-
-    Meaning --> Audio : score drops to 6-
-
-    note right of Meaning
-        Manual overrides, any band:
-        @ master  -> 9.0 (Meaning)
-        $ drill   -> 5.0 (Audio)
-        ! flag    -> 1.0 (Learning)
-    end note
+    L -- "score >= 4" --> A
+    A -- "score >= 7" --> M
+    A -- "score <= 3" --> L
+    M -- "score <= 6" --> A
 ```
+
+A correct answer adds points (+1 in Learning, +2 in Audio, +3 in Meaning,
+capped at 9); an incorrect answer subtracts 2 (floored at 1) — see the table
+above. Either can move a word into a neighboring band, as shown. Manual
+overrides jump straight to a band regardless of score: `@` master -> 9.0
+(Meaning), `$` drill -> 5.0 (Audio), `!` flag -> 1.0 (Learning).
 
 - Every word left untouched for **a week or more automatically loses 1.0
   point per idle week** (floored at `1.0`), pulling neglected words back

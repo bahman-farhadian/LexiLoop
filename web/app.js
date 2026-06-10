@@ -121,45 +121,24 @@
   btnDrill.addEventListener('click', () => sendAnswer('$'));
   btnEnd.addEventListener('click', () => sendAnswer('!!'));
 
-  // --- Keyboard shortcuts ---
-  // Only act when the answer box isn't focused, so typing (including '@'
-  // via Shift+2, '!', '$', etc.) always goes into the text field as normal
-  // text, just like the CLI's input prompt.
+  // After a session ends, Enter goes back to setup (same as clicking
+  // "Back to setup").
   document.addEventListener('keydown', (e) => {
-    if (sessionCard.style.display !== 'none' && currentQuestion
-        && document.activeElement !== answerInput) {
-      switch (e.key) {
-        case '+':
-          replayAudio();
-          e.preventDefault();
-          return;
-        case '?':
-          revealWord();
-          e.preventDefault();
-          return;
-        case '!':
-          if (!btnFlag.disabled) sendAnswer('!');
-          e.preventDefault();
-          return;
-        case '@':
-          if (!btnMaster.disabled) sendAnswer('@');
-          e.preventDefault();
-          return;
-        case '$':
-          if (!btnDrill.disabled) sendAnswer('$');
-          e.preventDefault();
-          return;
-        case 'Escape':
-          sendAnswer('!!');
-          e.preventDefault();
-          return;
-      }
-    }
-
-    // After a session ends, Enter goes back to setup (same as clicking
-    // "Back to setup").
     if (e.key === 'Enter' && summaryCard.style.display !== 'none') {
       document.getElementById('summary-restart').click();
+    }
+  });
+
+  // Keep the answer box focused at all times during a session, even if the
+  // user clicks elsewhere - matches the CLI, where you're always "in" the
+  // input prompt.
+  answerInput.addEventListener('blur', () => {
+    if (sessionCard.style.display !== 'none' && answerBlock.style.display !== 'none') {
+      setTimeout(() => {
+        if (sessionCard.style.display !== 'none' && answerBlock.style.display !== 'none') {
+          answerInput.focus();
+        }
+      }, 0);
     }
   });
 
@@ -462,13 +441,99 @@
       }
       let html = '<ul class="summary-list">';
       data.wordlists.forEach((wl) => {
-        html += `<li><strong>${escapeHtml(wl.user)}</strong> / ${escapeHtml(wl.lang)} `
+        html += `<li><button class="link-btn" data-user="${escapeHtml(wl.user)}" data-lang="${escapeHtml(wl.lang)}">`
+          + `<strong>${escapeHtml(wl.user)}</strong> / ${escapeHtml(wl.lang)}</button> `
           + `&mdash; <code>data/word_lists/${escapeHtml(wl.user)}_${escapeHtml(wl.lang)}.json</code></li>`;
       });
       html += '</ul>';
       listsBody.innerHTML = html;
+      listsBody.querySelectorAll('.link-btn').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          editorUser.value = btn.dataset.user;
+          editorLang.value = btn.dataset.lang;
+          loadEditor();
+        });
+      });
     } catch (err) {
       listsBody.innerHTML = `<span class="error">${escapeHtml(err.message)}</span>`;
+    }
+  }
+
+  // --- Word list editor ---
+  const editorUser = document.getElementById('editor-user');
+  const editorLang = document.getElementById('editor-lang');
+  const editorTableWrap = document.getElementById('editor-table-wrap');
+  const editorBody = document.getElementById('editor-body');
+  const editorMessage = document.getElementById('editor-message');
+
+  document.getElementById('editor-load').addEventListener('click', loadEditor);
+  document.getElementById('editor-add-row').addEventListener('click', () => addEditorRow({}));
+  document.getElementById('editor-save').addEventListener('click', saveEditor);
+
+  async function loadEditor() {
+    showError(editorMessage, '');
+    const user = editorUser.value.trim();
+    const lang = editorLang.value.trim();
+    if (!user || !lang) {
+      showError(editorMessage, 'User and language are required.');
+      return;
+    }
+    try {
+      const params = new URLSearchParams({ user, lang });
+      const data = await api(`/api/wordlist?${params.toString()}`);
+      editorBody.innerHTML = '';
+      data.words.forEach(addEditorRow);
+      editorTableWrap.style.display = 'block';
+    } catch (err) {
+      showError(editorMessage, err.message);
+    }
+  }
+
+  function addEditorRow(item) {
+    const tr = document.createElement('tr');
+    const fields = ['word', 'def1', 'def2'];
+    fields.forEach((field) => {
+      const td = document.createElement('td');
+      const input = document.createElement('input');
+      input.type = 'text';
+      input.className = `editor-${field}`;
+      input.value = item[field] || '';
+      input.autocomplete = 'off';
+      input.autocorrect = 'off';
+      input.autocapitalize = 'off';
+      input.spellcheck = false;
+      td.appendChild(input);
+      tr.appendChild(td);
+    });
+    const td = document.createElement('td');
+    const removeBtn = document.createElement('button');
+    removeBtn.className = 'secondary';
+    removeBtn.textContent = '×';
+    removeBtn.title = 'Remove';
+    removeBtn.addEventListener('click', () => tr.remove());
+    td.appendChild(removeBtn);
+    tr.appendChild(td);
+    editorBody.appendChild(tr);
+  }
+
+  async function saveEditor() {
+    showError(editorMessage, '');
+    const user = editorUser.value.trim();
+    const lang = editorLang.value.trim();
+    const words = [...editorBody.querySelectorAll('tr')].map((tr) => ({
+      word: tr.querySelector('.editor-word').value.trim(),
+      def1: tr.querySelector('.editor-def1').value.trim(),
+      def2: tr.querySelector('.editor-def2').value.trim(),
+    })).filter((w) => w.word);
+    try {
+      const data = await api('/api/wordlist', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user, lang, words }),
+      });
+      editorMessage.innerHTML = `<div class="success">Saved ${data.count} word(s) to ${escapeHtml(data.path)}</div>`;
+    } catch (err) {
+      showError(editorMessage, err.message);
     }
   }
 

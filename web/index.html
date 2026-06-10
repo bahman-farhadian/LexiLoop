@@ -3,6 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#11111b">
   <title>LexiLoop</title>
   <link rel="stylesheet" href="/style.css">
 </head>
@@ -25,11 +27,11 @@
         <div class="field-row">
           <div class="field">
             <label for="practice-user">User</label>
-            <input id="practice-user" type="text" placeholder="bahman" autocomplete="off">
+            <input id="practice-user" type="text" placeholder="bahman" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
           </div>
           <div class="field">
             <label for="practice-lang">Language</label>
-            <input id="practice-lang" type="text" placeholder="german" autocomplete="off">
+            <input id="practice-lang" type="text" placeholder="german" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
           </div>
           <div class="field" style="max-width: 110px;">
             <label for="practice-number">Words</label>
@@ -77,13 +79,11 @@
           <button id="btn-flag" class="shortcut" title="Flag as difficult (score &rarr; 1.0)">!</button>
           <button id="btn-master" class="shortcut" title="Mark as known (score &rarr; 9.0)">@</button>
           <button id="btn-drill" class="shortcut" title="Drill 9x in a row (score &rarr; 5.0)">$</button>
-          <button id="btn-end" class="shortcut" title="End session (Esc)">!!</button>
+          <button id="btn-end" class="shortcut" title="End session">!!</button>
         </div>
         <div class="shortcut-hint">
           Tip: type <code>+</code>/<code>?</code>/<code>!</code>/<code>@</code>/<code>$</code>/<code>!!</code>
-          as your answer too &mdash; same as the CLI. When the answer box isn't
-          focused, <code>+</code> <code>?</code> <code>!</code> <code>@</code>
-          <code>$</code> and <code>Esc</code> (end) work as keyboard shortcuts.
+          as your answer too &mdash; same as the CLI.
         </div>
       </div>
 
@@ -102,11 +102,11 @@
         <div class="field-row">
           <div class="field">
             <label for="report-user">User</label>
-            <input id="report-user" type="text" placeholder="bahman" autocomplete="off">
+            <input id="report-user" type="text" placeholder="bahman" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
           </div>
           <div class="field">
             <label for="report-lang">Language (optional)</label>
-            <input id="report-lang" type="text" placeholder="all languages" autocomplete="off">
+            <input id="report-lang" type="text" placeholder="all languages" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
           </div>
         </div>
         <button id="load-report" class="primary">Load report</button>
@@ -126,19 +126,46 @@
         <div class="field-row">
           <div class="field">
             <label for="init-user">User</label>
-            <input id="init-user" type="text" placeholder="bahman" autocomplete="off">
+            <input id="init-user" type="text" placeholder="bahman" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
           </div>
           <div class="field">
             <label for="init-lang">Language</label>
-            <input id="init-lang" type="text" placeholder="french" autocomplete="off">
+            <input id="init-lang" type="text" placeholder="french" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
           </div>
         </div>
         <button id="init-create" class="primary">Create</button>
-        <p class="muted" style="margin-top: 0.75rem;">
-          Creates an empty <code>data/word_lists/&lt;user&gt;_&lt;lang&gt;.json</code>
-          file. Add <code>{"word": ..., "definition": ...}</code> entries to it,
-          then start a practice session.
-        </p>
+      </div>
+
+      <div class="card">
+        <h2>Edit word list</h2>
+        <div id="editor-message"></div>
+        <div class="field-row">
+          <div class="field">
+            <label for="editor-user">User</label>
+            <input id="editor-user" type="text" placeholder="bahman" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
+          </div>
+          <div class="field">
+            <label for="editor-lang">Language</label>
+            <input id="editor-lang" type="text" placeholder="german" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
+          </div>
+        </div>
+        <button id="editor-load" class="secondary">Load</button>
+        <div id="editor-table-wrap" style="display: none;">
+          <table id="editor-table" class="editor-table">
+            <thead>
+              <tr><th>Word</th><th>Definition 1</th><th>Definition 2</th><th></th></tr>
+            </thead>
+            <tbody id="editor-body"></tbody>
+          </table>
+          <div class="editor-actions">
+            <button id="editor-add-row" class="secondary">+ Add word</button>
+            <button id="editor-save" class="primary">Save</button>
+          </div>
+          <p class="muted">
+            Saves directly to <code>data/word_lists/&lt;user&gt;_&lt;lang&gt;.json</code>
+            and re-syncs the database (the source of truth).
+          </p>
+        </div>
       </div>
     </section>
   </main>
