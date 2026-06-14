@@ -25,7 +25,7 @@ import lexiloop as ll
 FONT_FILE = "/System/Library/Fonts/Supplemental/Arial Unicode.ttf"
 VIDEO_SIZE = "1280x720"
 BACKGROUND_COLOR = "0x303030"
-GAP_SECONDS = 0.6
+GAP_SECONDS = 0.4
 
 
 def escape_drawtext(text):
@@ -67,23 +67,26 @@ def make_word_clip(entry, voice, repeats, tmpdir, index):
     raw_wav = os.path.join(tmpdir, f"{index}_raw.wav")
     run(["ffmpeg", "-y", "-i", raw_aiff, "-ar", "44100", "-ac", "1", raw_wav])
 
-    # Repeat the word's audio `repeats` times, with a short silence between.
-    repeated_wav = os.path.join(tmpdir, f"{index}_repeated.wav")
-    filter_parts = [f"[1:a]atrim=duration={GAP_SECONDS}[sil]"]
-    concat_inputs = []
-    for i in range(repeats):
-        concat_inputs.append("[0:a]")
-        if i != repeats - 1:
-            concat_inputs.append("[sil]")
-    filter_parts.append(
-        "".join(concat_inputs) + f"concat=n={len(concat_inputs)}:v=0:a=1[aout]"
-    )
+    silence_wav = os.path.join(tmpdir, f"{index}_silence.wav")
     run([
         "ffmpeg", "-y",
-        "-i", raw_wav,
-        "-f", "lavfi", "-i", f"anullsrc=channel_layout=mono:sample_rate=44100",
-        "-filter_complex", ";".join(filter_parts),
-        "-map", "[aout]", repeated_wav,
+        "-f", "lavfi", "-i", "anullsrc=channel_layout=mono:sample_rate=44100",
+        "-t", str(GAP_SECONDS), "-c:a", "pcm_s16le", silence_wav,
+    ])
+
+    # Repeat the word's audio `repeats` times, with a short silence between.
+    concat_list = os.path.join(tmpdir, f"{index}_concat.txt")
+    with open(concat_list, "w", encoding="utf-8") as f:
+        for i in range(repeats):
+            f.write(f"file '{raw_wav}'\n")
+            if i != repeats - 1:
+                f.write(f"file '{silence_wav}'\n")
+
+    repeated_wav = os.path.join(tmpdir, f"{index}_repeated.wav")
+    run([
+        "ffmpeg", "-y",
+        "-f", "concat", "-safe", "0", "-i", concat_list,
+        "-c:a", "pcm_s16le", repeated_wav,
     ])
 
     duration = run([
