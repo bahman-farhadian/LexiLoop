@@ -636,21 +636,26 @@ def _score_after(status, current_score):
 
 def start_practice_session(user, lang, audio, audio_lang=None, drill_all=False):
     """
-    Focused-batch practice: always 4 words, up to 16 questions per session.
-    Words are picked from the DB in priority order (in-progress > new > mastered).
-    When all 4 graduate before the 16-question cap, the next 4 are loaded and
-    practice continues within the remaining questions. Ends early if the batch
-    shrinks to 1 word (can't rotate without repeating the same word).
-    """
-    def load_batch():
-        try:
-            words = get_words_for_practice(user, lang)
-        except ValueError:
-            return [], []
-        batch = [{'id': r[0], 'word': r[1], 'def': r[2], 'score': r[3]} for r in words]
-        return batch, build_definition_pool(words)
+    Focused-batch practice: 4 active words, exactly 16 questions per session.
 
-    active_batch, definition_pool = load_batch()
+    Session word flow:
+      1. Fetch up to BATCH_SIZE + MAX_QUESTIONS words from DB in priority order
+         (in-progress words first, then brand-new, then mastered-for-review).
+      2. First BATCH_SIZE words become the active batch; the rest form a pool.
+      3. Each turn: ask the lowest-scored word in the batch. Never the same word
+         twice in a row (ties broken randomly among non-last candidates).
+      4. When a word reaches score 9: graduate it and immediately promote the
+         next word from the pool so the batch stays at BATCH_SIZE.
+      5. Session ends after exactly MAX_QUESTIONS questions (or if the word list
+         is fully exhausted and the batch drops below 2 words).
+    """
+    words = get_words_for_practice(user, lang, BATCH_SIZE + MAX_QUESTIONS)
+    n = min(BATCH_SIZE, len(words))
+    active_batch = [{'id': r[0], 'word': r[1], 'def': r[2], 'score': r[3]}
+                    for r in words[:n]]
+    pool = list(words[n:])
+    definition_pool = build_definition_pool(words)
+
     if not active_batch:
         print("No active words found for this list.")
         return
@@ -669,23 +674,20 @@ def start_practice_session(user, lang, audio, audio_lang=None, drill_all=False):
             f"--- Practice{mode_label} | "
             f"Q{questions_count}/{MAX_QUESTIONS} | "
             f"Mastered: {graduated} | "
-            f"Batch: {len(active_batch)} ---\n{SESSION_HELP}"
+            f"Pool: {len(pool)} ---\n{SESSION_HELP}"
         )
 
     try:
         while questions_count < MAX_QUESTIONS:
-            if not active_batch:
-                # All batch words graduated; load next batch from DB.
-                active_batch, definition_pool = load_batch()
-                if not active_batch:
-                    break
-                last_word_id = None
-                print(f"\n  {Colors.GREEN}All words mastered! Loading next batch...{Colors.ENDC}")
-                time.sleep(1.0)
-                continue
+            # Refill batch from pool whenever it drops below BATCH_SIZE.
+            while len(active_batch) < BATCH_SIZE and pool:
+                r = pool.pop(0)
+                active_batch.append({'id': r[0], 'word': r[1], 'def': r[2], 'score': r[3]})
 
-            if len(active_batch) == 1:
-                break  # Can't rotate — next question would repeat the same word.
+            if not active_batch:
+                break  # word list fully exhausted
+            if len(active_batch) == 1 and not pool:
+                break  # only 1 word left, can't rotate; word list too small
 
             # Lowest-scored first; never ask the same word twice in a row.
             min_score = min(e['score'] for e in active_batch)
@@ -737,7 +739,7 @@ def start_practice_session(user, lang, audio, audio_lang=None, drill_all=False):
                 active_batch.remove(entry)
                 graduated += 1
                 print(f"\n  {Colors.GREEN}✓ '{word_text}' mastered! "
-                      f"(total this session: {graduated}){Colors.ENDC}")
+                      f"(session total: {graduated}){Colors.ENDC}")
                 time.sleep(1.2)
             elif message:
                 print(f"{word_header} {message}")

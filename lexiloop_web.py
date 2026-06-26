@@ -119,19 +119,24 @@ def build_question(session, word_id, word_text, definition, score):
     return question
 
 
-BATCH_SIZE = 4
-MAX_QUESTIONS = BATCH_SIZE * 4  # 16 questions per session
+BATCH_SIZE = ll.BATCH_SIZE
+MAX_QUESTIONS = ll.MAX_QUESTIONS
 
 
 # --- Session lifecycle ---
 def start_session(user, lang, audio_lang=None):
     ll.sync_word_list(user, lang)
-    words = ll.get_words_for_practice(user, lang)
+    words = ll.get_words_for_practice(user, lang, BATCH_SIZE + MAX_QUESTIONS)
     voice_lang = audio_lang or lang
 
+    n = min(BATCH_SIZE, len(words))
     batch = [
         {'word_id': r[0], 'word_text': r[1], 'definition': r[2], 'score': r[3]}
-        for r in words
+        for r in words[:n]
+    ]
+    pool = [
+        {'word_id': r[0], 'word_text': r[1], 'definition': r[2], 'score': r[3]}
+        for r in words[n:]
     ]
 
     session_id = uuid.uuid4().hex
@@ -140,7 +145,7 @@ def start_session(user, lang, audio_lang=None):
         'lang': lang,
         'lang_locale': SPEECH_LOCALES.get(ll.LANGUAGE_LOCALES.get(voice_lang.lower(), ''), ''),
         'batch': batch,
-        'pool': [],
+        'pool': pool,
         'definition_pool': ll.build_definition_pool(words),
         'total': len(words),
         'graduated': 0,
@@ -158,22 +163,25 @@ def start_session(user, lang, audio_lang=None):
 
 
 def next_question(session):
+    # Refill batch from pool whenever it dropped below BATCH_SIZE.
+    while len(session['batch']) < BATCH_SIZE and session['pool']:
+        session['batch'].append(session['pool'].pop(0))
+
     batch = session['batch']
     if not batch:
         return None
+    if len(batch) == 1 and not session['pool']:
+        return None  # word list too small to rotate; end rather than repeat
+
     last_id = session['last_word_id']
 
     # Pick lowest-scored word; never the same word as the previous question.
     min_score = min(e['score'] for e in batch)
     candidates = [e for e in batch if e['score'] == min_score]
-    if len(batch) > 1:
-        without_last = [e for e in candidates if e['word_id'] != last_id]
-        if not without_last:
-            without_last = [e for e in batch if e['word_id'] != last_id]
-        if without_last:
-            candidates = without_last
-
-    entry = random.choice(candidates)
+    without_last = [e for e in candidates if e['word_id'] != last_id]
+    if not without_last:
+        without_last = [e for e in batch if e['word_id'] != last_id]
+    entry = random.choice(without_last or candidates)
     session['last_word_id'] = entry['word_id']
     return build_question(session, entry['word_id'], entry['word_text'],
                           entry['definition'], entry['score'])
@@ -217,25 +225,11 @@ def advance(session, status, new_score, message, attempt=None):
                 session['batch'].remove(entry)
                 session['graduated'] += 1
                 result['graduated'] = word_text
-                # If all batch words graduated and questions remain, refill from DB.
-                if not session['batch']:
-                    try:
-                        new_words = ll.get_words_for_practice(session['user'], session['lang'])
-                        session['batch'] = [
-                            {'word_id': r[0], 'word_text': r[1], 'definition': r[2], 'score': r[3]}
-                            for r in new_words
-                        ]
-                        session['definition_pool'] = ll.build_definition_pool(new_words)
-                        session['last_word_id'] = None
-                        result['refill'] = True
-                    except ValueError:
-                        pass  # no more words — session ends naturally
+                # Pool refill happens inside next_question(); nothing extra needed here.
             break
 
     limit_reached = session['practiced'] >= session['max_questions']
-    # Stop if the batch can't rotate — next question would repeat the same word.
-    cant_rotate = len(session['batch']) <= 1
-    nxt = None if (limit_reached or cant_rotate) else next_question(session)
+    nxt = None if limit_reached else next_question(session)
     if nxt is None:
         result['done'] = True
         result['session'] = finalize_session(session)
