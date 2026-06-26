@@ -194,7 +194,7 @@
     feedback.className = 'feedback';
     drillBlock.style.display = 'none';
 
-    sessionProgress.textContent = `Word ${progress.current}/${progress.total}`;
+    sessionProgress.textContent = `Mastered ${progress.graduated ?? 0}/${progress.total}`;
     sessionGauge.textContent = `${question.gauge} (score: ${question.score.toFixed(1)})`;
     sessionGauge.className = `gauge band-${question.band}`;
     sessionType.textContent = TYPE_LABELS[question.type] || question.type;

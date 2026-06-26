@@ -31,6 +31,23 @@ flash-and-hide spelling test for "Learning", and the listening test for
 "Meaning" (since there's no meaning to quiz), but still earns/loses the
 points for whichever band it's in.
 
+### Focused-batch learning
+
+Sessions use a **focused batch** approach rather than asking each word once
+and moving on. A small active batch of words (default: 4) is worked on
+simultaneously. Each turn, whichever word in the batch has the **lowest
+current score** is asked next (ties broken randomly). When a word reaches
+score 9 it graduates and the next word from the session pool is promoted into
+the batch.
+
+This means:
+- A session with `--number 20` loads 20 words as the pool, but only 4 are
+  "in play" at once. A first-time learner may spend the whole session just
+  mastering the first 4 words — that's intentional.
+- Once those 4 are mastered, the next 4 are promoted automatically, and so
+  on until the pool is exhausted or the session is ended.
+- Use `--batch <n>` to change the active batch size (default: 4).
+
 ```mermaid
 flowchart LR
     L["Learning\nscore 1-3"]
@@ -49,10 +66,10 @@ above. Either can move a word into a neighboring band, as shown. Manual
 overrides jump straight to a band regardless of score: `@` master -> 9.0
 (Meaning), `$` drill -> 5.0 (Audio), `!` flag -> 1.0 (Learning).
 
-- Every word left untouched for **a week or more automatically loses 1.0
-  point per idle week** (floored at `1.0`), pulling neglected words back
-  into easier question types over time — this happens automatically on every
-  `practice`/`report --lang` run, no separate command needed.
+- Every word left untouched for **one or more days automatically loses 1.0
+  point per idle day** (floored at `1.0`), pulling neglected words back into
+  easier question types — this happens automatically on every `practice`/
+  `report --lang` run, no separate command needed.
 - Every session is logged (date, duration, words practiced, correct/incorrect,
   drilled count) so you can review your history with `report`.
 
@@ -173,7 +190,8 @@ flowchart TD
 |---|---|
 | `--user <name>` | Required. Username (lowercase letters, digits, underscores). |
 | `--lang <name>` | Required. Which word list to practice (the full list identifier, e.g. `german_home`). |
-| `--number <n>` | Number of words for the session (default: 20). |
+| `--number <n>` | Total pool size for the session (default: 20). All `n` words are loaded by priority (lowest score first); the batch works through them progressively. |
+| `--batch <n>` | Active batch size (default: 4). How many words are practiced simultaneously before new ones are introduced. |
 | `--no-audio` | Disable speaking each word aloud. On **macOS**, audio (via `say`) is **on by default**; this flag turns it off. Has no effect on other platforms, where audio is never available. |
 | `--audio-lang <lang>` | Override the language used for voice/TTS selection. Useful when `--lang` is a sub-list name like `german_home` that doesn't auto-detect as German: pass `--audio-lang german` to use the German `say` voice regardless. Accepts the same values as `--lang` (e.g. `german`, `de`). |
 | `--drill` | Drill mode: every word in the session goes through the 9-repetition drill automatically, regardless of its score band. |

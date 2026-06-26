@@ -13,7 +13,6 @@ import json
 import time
 import random
 import urllib.parse
-import collections
 import http.server
 import uuid
 
@@ -120,20 +119,35 @@ def build_question(session, word_id, word_text, definition, score):
     return question
 
 
+BATCH_SIZE = 4
+
+
 # --- Session lifecycle ---
 def start_session(user, lang, number, audio_lang=None):
     ll.sync_word_list(user, lang)
     words = ll.get_words_for_practice(user, lang, number)
     voice_lang = audio_lang or lang
 
+    n = min(BATCH_SIZE, len(words))
+    batch = [
+        {'word_id': r[0], 'word_text': r[1], 'definition': r[2], 'score': r[3]}
+        for r in words[:n]
+    ]
+    pool = [
+        {'word_id': r[0], 'word_text': r[1], 'definition': r[2], 'score': r[3]}
+        for r in words[n:]
+    ]
+
     session_id = uuid.uuid4().hex
     session = {
         'user': user,
         'lang': lang,
         'lang_locale': SPEECH_LOCALES.get(ll.LANGUAGE_LOCALES.get(voice_lang.lower(), ''), ''),
-        'queue': collections.deque(words),
+        'batch': batch,
+        'pool': pool,
         'definition_pool': ll.build_definition_pool(words),
         'total': len(words),
+        'graduated': 0,
         'practiced': 0,
         'correct': 0,
         'drilled': 0,
@@ -146,10 +160,13 @@ def start_session(user, lang, number, audio_lang=None):
 
 
 def next_question(session):
-    if not session['queue']:
+    if not session['batch']:
         return None
-    word_id, word_text, definition, score = session['queue'].popleft()
-    return build_question(session, word_id, word_text, definition, score)
+    min_score = min(e['score'] for e in session['batch'])
+    candidates = [e for e in session['batch'] if e['score'] == min_score]
+    entry = random.choice(candidates)
+    return build_question(session, entry['word_id'], entry['word_text'],
+                          entry['definition'], entry['score'])
 
 
 def finalize_session(session, ended_early=False):
@@ -169,8 +186,10 @@ def finalize_session(session, ended_early=False):
     }
 
 
-def advance(session, status, message, attempt=None):
-    word_text = session['current']['word_text']
+def advance(session, status, new_score, message, attempt=None):
+    cur = session['current']
+    word_text = cur['word_text']
+    word_id = cur['word_id']
     session['practiced'] += 1
     if status == 'correct':
         session['correct'] += 1
@@ -179,7 +198,21 @@ def advance(session, status, message, attempt=None):
     elif status == 'drilled':
         session['drilled'] += 1
 
+    # Update in-memory score; graduate if mastered.
     result = {'result': status, 'message': message, 'word': word_text}
+    for entry in session['batch']:
+        if entry['word_id'] == word_id:
+            entry['score'] = new_score
+            if new_score >= 9.0:
+                session['batch'].remove(entry)
+                session['graduated'] += 1
+                if session['pool']:
+                    promoted = session['pool'].pop(0)
+                    session['batch'].append(promoted)
+                    result['promoted'] = promoted['word_text']
+                result['graduated'] = word_text
+            break
+
     nxt = next_question(session)
     if nxt is None:
         result['done'] = True
@@ -187,7 +220,10 @@ def advance(session, status, message, attempt=None):
     else:
         result['done'] = False
         result['question'] = nxt
-        result['progress'] = {'current': session['practiced'] + 1, 'total': session['total']}
+        result['progress'] = {
+            'graduated': session['graduated'],
+            'total': session['total'],
+        }
     return result
 
 
@@ -202,7 +238,8 @@ def process_drill_answer(session, answer):
         if drill['correct_in_a_row'] >= DRILL_TARGET:
             ll.update_word_score(session['user'], session['lang'], cur['word_id'], 'drilled')
             cur['drill'] = None
-            return advance(session, 'drilled', "Drill complete. Score set to 5.0.")
+            return advance(session, 'drilled', ll.FIXED_SCORES['drilled'],
+                           "Drill complete. Score set to 5.0.")
         correct = True
     else:
         drill['correct_in_a_row'] = 0
@@ -249,11 +286,13 @@ def process_answer(session, answer):
 
     if answer.startswith('@'):
         ll.update_word_score(session['user'], session['lang'], cur['word_id'], 'mastered')
-        return advance(session, 'mastered', f"Marked '{cur['word_text']}' as known.")
+        return advance(session, 'mastered', ll.FIXED_SCORES['mastered'],
+                       f"Marked '{cur['word_text']}' as known.")
 
     if answer.startswith('!'):
         ll.update_word_score(session['user'], session['lang'], cur['word_id'], 'flagged')
-        return advance(session, 'flagged', f"Flagged '{cur['word_text']}' for more practice.")
+        return advance(session, 'flagged', ll.FIXED_SCORES['flagged'],
+                       f"Flagged '{cur['word_text']}' for more practice.")
 
     if cur['type'] == 'meaning':
         correct = answer.lower()[:1] == cur['correct_letter']
@@ -262,9 +301,13 @@ def process_answer(session, answer):
 
     if correct:
         ll.update_word_score(session['user'], session['lang'], cur['word_id'], 'correct', cur['score'])
-        return advance(session, 'correct', None, attempt=answer)
+        new_score = min(9.0, cur['score'] + ll.SCORE_DELTAS[ll.score_band(cur['score'])])
+        return advance(session, 'correct', new_score, None, attempt=answer)
+
     ll.update_word_score(session['user'], session['lang'], cur['word_id'], 'incorrect', cur['score'])
-    return advance(session, 'incorrect', f"Incorrect. The word was: {cur['word_text']}", attempt=answer)
+    new_score = max(1.0, cur['score'] - ll.INCORRECT_DELTA)
+    return advance(session, 'incorrect', new_score,
+                   f"Incorrect. The word was: {cur['word_text']}", attempt=answer)
 
 
 # --- Word lists / report ---
@@ -543,7 +586,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
             return self._send_json({
                 'session_id': session_id,
                 'lang_locale': session['lang_locale'],
-                'progress': {'current': 1, 'total': session['total']},
+                'progress': {'graduated': 0, 'total': session['total']},
                 'question': question,
             })
 

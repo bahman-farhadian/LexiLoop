@@ -8,7 +8,6 @@ import random
 import sqlite3
 import argparse
 import subprocess
-import collections
 from datetime import date
 
 # --- Configuration ---
@@ -233,10 +232,9 @@ def normalize_definition(definition):
 
 def apply_decay(conn, table):
     """
-    Applies time-based decay: any active word not practiced in a full week
-    or more loses 1.0 score per elapsed week (floored at 1.0). This pulls
-    neglected words back into easier question bands automatically, replacing
-    the old manual 'update' command.
+    Applies time-based decay: any active word not practiced for one or more
+    days loses 1.0 score per idle day (floored at 1.0). This pulls neglected
+    words back into easier question bands automatically.
     """
     today = date.today()
     cursor = conn.execute(
@@ -244,9 +242,9 @@ def apply_decay(conn, table):
     )
     for word_id, score, last_decay_at in cursor.fetchall():
         last_decay_date = date.fromisoformat(last_decay_at)
-        weeks = (today - last_decay_date).days // 7
-        if weeks >= 1:
-            new_score = max(1.0, score - weeks)
+        days = (today - last_decay_date).days
+        if days >= 1:
+            new_score = max(1.0, score - days)
             conn.execute(
                 f'UPDATE "{table}" SET score = ?, last_decay_at = ? WHERE id = ?',
                 (new_score, today.isoformat(), word_id)
@@ -371,8 +369,10 @@ def update_word_score(user, lang, word_id, result_status, current_score=None):
 
 def get_words_for_practice(user, lang, num_words):
     """
-    Selects active words for a session, prioritizing words with scores < 9,
-    and filling remaining slots with the oldest-practiced mastered words.
+    Builds the session pool: active words with score < 9 ordered lowest-score
+    first (most in need of practice), then mastered words (score = 9) ordered
+    by oldest-practiced first as filler. No shuffling — the batch logic inside
+    the session picks the lowest-scored word to ask next.
     """
     table = words_table_name(user, lang)
     conn = get_connection()
@@ -381,14 +381,12 @@ def get_words_for_practice(user, lang, num_words):
         f'WHERE active = 1 AND score < 9 ORDER BY score ASC, last_practiced ASC'
     )
     priority_words = cursor.fetchall()
-    random.shuffle(priority_words)
 
     cursor = conn.execute(
         f'SELECT id, text, definition, score FROM "{table}" '
         f'WHERE active = 1 AND score = 9 ORDER BY last_practiced ASC'
     )
     mastered_words = cursor.fetchall()
-    random.shuffle(mastered_words)
 
     combined_pool = priority_words + mastered_words
     conn.close()
@@ -622,52 +620,88 @@ def ask_meaning(user, lang, word_id, word_text, definition, score, definition_po
     return 'incorrect', f"Incorrect. The right answer was {correct_letter}) {correct_def}", answer
 
 
-def start_practice_session(user, lang, words_for_session, audio, audio_lang=None, drill_all=False):
-    """
-    Single-pass practice session: each word's current score selects which
-    question type it gets (Band 1 'Learning', Band 2 'Audio', Band 3
-    'Meaning' - see ask_learning/ask_audio/ask_meaning), so a session over a
-    mix of new and practiced words naturally mixes all three question types.
+def _score_after(status, current_score):
+    """Mirrors update_word_score's score computation for in-memory batch tracking."""
+    if status == 'correct':
+        return min(9.0, current_score + SCORE_DELTAS[score_band(current_score)])
+    if status == 'incorrect':
+        return max(1.0, current_score - INCORRECT_DELTA)
+    return FIXED_SCORES.get(status, current_score)
 
-    audio_lang overrides the voice-selection language for TTS (useful when
-    --lang is a sub-list name like 'german_home' but the voice should still
-    be German). drill_all forces every word through a 9-rep drill regardless
-    of its score band.
+
+def start_practice_session(user, lang, words_for_session, audio, audio_lang=None,
+                           drill_all=False, batch_size=4):
     """
-    correct_count, words_practiced_count, drilled_words_count = 0, 0, 0
+    Focused-batch practice session. A small active batch of `batch_size` words
+    is worked on simultaneously. Each turn, the lowest-scored word in the batch
+    is asked (ties broken randomly). When a word reaches score 9 it graduates
+    and the next word from the pool is promoted into the batch.
+
+    audio_lang overrides the TTS voice language (useful for sub-list names like
+    'german_home'). drill_all forces every word through the 9-rep drill.
+    """
+    pool = list(words_for_session)
+    n = min(batch_size, len(pool))
+    active_batch = [
+        {'id': r[0], 'word': r[1], 'def': r[2], 'score': r[3]}
+        for r in pool[:n]
+    ]
+    pool = pool[n:]
+
+    total_pool = len(words_for_session)
+    graduated = 0
+    correct_count = 0
+    questions_count = 0
+    drilled_words_count = 0
     incorrect_list = []
-    total_words = len(words_for_session)
-    mode_label = " [DRILL ALL]" if drill_all else ""
-    header_text = f"--- Practice Session ({total_words} words){mode_label} ---\n{SESSION_HELP}"
     definition_pool = build_definition_pool(words_for_session)
     start_time = time.time()
-    queue = collections.deque(words_for_session)
+    mode_label = " [DRILL ALL]" if drill_all else ""
+
+    def header_text():
+        return (
+            f"--- Practice{mode_label} | "
+            f"Mastered: {graduated}/{total_pool} | "
+            f"Active: {len(active_batch)} | "
+            f"Queue: {len(pool)} ---\n{SESSION_HELP}"
+        )
+
     try:
-        while queue:
-            word_id, word_text, definition, score = queue.popleft()
-            word_header = f"Word {words_practiced_count + 1}/{total_words} {score_gauge(score)} (score: {score:.1f}):"
-            band = score_band(score)
+        while active_batch:
+            min_score = min(e['score'] for e in active_batch)
+            candidates = [e for e in active_batch if e['score'] == min_score]
+            entry = random.choice(candidates)
+            word_id, word_text, definition, score = (
+                entry['id'], entry['word'], entry['def'], entry['score']
+            )
+            word_header = f"{score_gauge(score)} (score: {score:.1f}):"
+
             if drill_all:
-                drill_word(user, lang, word_text, word_id, definition, header_text, True, audio, audio_lang=audio_lang)
+                drill_word(user, lang, word_text, word_id, definition,
+                           header_text(), True, audio, audio_lang=audio_lang)
                 status, message, attempt = 'drilled', None, None
-            elif band == 1:
+            elif score_band(score) == 1:
                 status, message, attempt = ask_learning(
-                    user, lang, word_id, word_text, definition, score, audio, header_text, word_header, audio_lang=audio_lang
-                )
-            elif band == 2:
+                    user, lang, word_id, word_text, definition, score,
+                    audio, header_text(), word_header, audio_lang=audio_lang)
+            elif score_band(score) == 2:
                 status, message, attempt = ask_audio(
-                    user, lang, word_id, word_text, definition, score, audio, header_text, word_header, audio_lang=audio_lang
-                )
+                    user, lang, word_id, word_text, definition, score,
+                    audio, header_text(), word_header, audio_lang=audio_lang)
             else:
                 status, message, attempt = ask_meaning(
-                    user, lang, word_id, word_text, definition, score, definition_pool, audio, header_text, word_header, audio_lang=audio_lang
-                )
+                    user, lang, word_id, word_text, definition, score,
+                    definition_pool, audio, header_text(), word_header,
+                    audio_lang=audio_lang)
 
             if status == 'end':
                 print("\n\nSession ended early. Saving progress...")
                 break
 
-            words_practiced_count += 1
+            questions_count += 1
+            new_score = _score_after(status, score)
+            entry['score'] = new_score
+
             if status == 'drilled':
                 drilled_words_count += 1
             elif status == 'correct':
@@ -675,29 +709,47 @@ def start_practice_session(user, lang, words_for_session, audio, audio_lang=None
             elif status == 'incorrect':
                 incorrect_list.append((word_text, attempt))
 
-            if message:
+            if new_score >= 9.0:
+                active_batch.remove(entry)
+                graduated += 1
+                if pool:
+                    nxt = pool.pop(0)
+                    new_entry = {'id': nxt[0], 'word': nxt[1], 'def': nxt[2], 'score': nxt[3]}
+                    active_batch.append(new_entry)
+                    print(f"\n  {Colors.GREEN}✓ '{word_text}' mastered! "
+                          f"({graduated}/{total_pool}) → '{new_entry['word']}' added to batch.{Colors.ENDC}")
+                else:
+                    print(f"\n  {Colors.GREEN}✓ '{word_text}' mastered! "
+                          f"({graduated}/{total_pool}){Colors.ENDC}")
+                time.sleep(1.2)
+            elif message:
                 print(f"{word_header} {message}")
                 time.sleep(1.2)
+
     except KeyboardInterrupt:
         print("\n\nSession ended early (Ctrl+C). Saving progress...")
-    if words_practiced_count == 0:
+
+    if questions_count == 0:
         clear_screen()
         print("No words were practiced. Nothing to save.")
         return
+
     elapsed_seconds = int(time.time() - start_time)
-    log_session(user, lang, elapsed_seconds, words_practiced_count, correct_count, len(incorrect_list), drilled_words_count)
+    log_session(user, lang, elapsed_seconds, questions_count, correct_count,
+                len(incorrect_list), drilled_words_count)
     clear_screen()
     print("\n--- Session Summary ---")
     minutes, seconds = divmod(elapsed_seconds, 60)
-    print(f"Words practiced: {words_practiced_count}")
-    print(f"Correct answers: {correct_count}")
-    print(f"Incorrect answers: {len(incorrect_list)}")
-    print(f"Words drilled: {drilled_words_count}")
-    print(f"Session time: {minutes} min {seconds} sec")
+    print(f"Words mastered this session: {graduated}/{total_pool}")
+    print(f"Questions answered:           {questions_count}")
+    print(f"Correct answers:              {correct_count}")
+    print(f"Incorrect answers:            {len(incorrect_list)}")
+    print(f"Words drilled:                {drilled_words_count}")
+    print(f"Session time:                 {minutes} min {seconds} sec")
     if incorrect_list:
         print("\nWords you got wrong:")
-        for correct, attempt in incorrect_list:
-            print(f"- You wrote: '{attempt}', Correct was: '{correct}'")
+        for word, attempt in incorrect_list:
+            print(f"  - You wrote: '{attempt}', correct: '{word}'")
     print("\nSession finished. Progress saved.")
 
 
@@ -809,7 +861,8 @@ def cmd_practice(args):
     sync_word_list(args.user, args.lang)
     words_for_session = get_words_for_practice(args.user, args.lang, args.number)
     start_practice_session(args.user, args.lang, words_for_session, audio,
-                           audio_lang=audio_lang, drill_all=args.drill)
+                           audio_lang=audio_lang, drill_all=args.drill,
+                           batch_size=args.batch)
 
 
 def cmd_report(args):
@@ -847,8 +900,8 @@ How question types are chosen:
                         Correct: +2.
     score 7-9 (* * o/*) Meaning - word shown, pick its meaning (a-d).
                         Correct: +3 (capped at 9.0).
-  Any incorrect answer: -2 (floored at 1.0). Words left idle for a week or
-  more also lose 1.0 per idle week automatically, pulling them back into
+  Any incorrect answer: -2 (floored at 1.0). Words left idle for one or
+  more days also lose 1.0 per idle day automatically, pulling them back into
   easier question types over time.
 
 Special Commands (during a session):
@@ -868,7 +921,12 @@ Developed by Bahman Farhadian.
     practice_parser = subparsers.add_parser('practice', help="Start a practice session.")
     practice_parser.add_argument('--user', required=True, help="Username (lowercase letters, digits, underscores).")
     practice_parser.add_argument('--lang', required=True, help="Word list / language to practice.")
-    practice_parser.add_argument('--number', type=int, default=20, help="Number of words for the session (default: 20).")
+    practice_parser.add_argument('--number', type=int, default=20,
+                                  help="Total pool size for the session (default: 20). Words are loaded in\n"
+                                       "order of priority (lowest score first) up to this limit.")
+    practice_parser.add_argument('--batch', type=int, default=4,
+                                  help="Active batch size (default: 4). This many words are worked on at once;\n"
+                                       "a new word is introduced from the pool only when one is mastered (score 9).")
     practice_parser.add_argument('--no-audio', action='store_true',
                                   help="Disable speaking each word aloud (audio is on by default on macOS, via 'say';\n"
                                        "has no effect on other platforms). LexiLoop tries to use a 'say' voice that\n"
