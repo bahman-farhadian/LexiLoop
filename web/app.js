@@ -837,7 +837,8 @@
 
     const pct = data.total > 0 ? Math.round((data.processed / data.total) * 100) : 0;
     builderProgressFill.style.width = `${pct}%`;
-    builderStatus.textContent = `${data.processed} / ${data.total} words processed…`;
+    const existingNote = data.existing_count > 0 ? ` (appending to ${data.existing_count} existing)` : '';
+    builderStatus.textContent = `${data.processed} / ${data.total} new words processed${existingNote}…`;
 
     // Append newly resolved words
     const words = data.words || [];
@@ -856,7 +857,11 @@
       clearInterval(builderPollTimer);
       builderPollTimer = null;
       builderProgressFill.style.width = '100%';
-      builderStatus.textContent = `Done — ${data.processed} words processed.`;
+      const total = (data.existing_count || 0) + data.processed;
+      const doneNote = data.existing_count > 0
+        ? `Done — ${data.processed} new words appended (${total} total in file).`
+        : `Done — ${data.processed} words saved.`;
+      builderStatus.textContent = doneNote;
       if (data.output) {
         builderOutputPath.textContent = data.output;
         builderDone.style.display = 'block';

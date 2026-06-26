@@ -145,11 +145,41 @@ def de_noun_info(word):
 
 
 # ------------------------------------------------------------
+# Load existing output (for append mode)
+# ------------------------------------------------------------
+
+def load_existing(output_path):
+    """Return (entries, known_base_forms) from an existing JSON output file.
+
+    known_base_forms is a set of lowercase bare words (articles stripped)
+    already present, used to skip input words that are already resolved.
+    """
+    if not os.path.exists(output_path):
+        return [], set()
+    try:
+        with open(output_path, encoding='utf-8') as f:
+            entries = json.load(f)
+        known = set()
+        for entry in entries:
+            for part in entry.get('word', '').split(','):
+                known.add(_base_form(part))
+        return entries, known
+    except (json.JSONDecodeError, OSError):
+        return [], set()
+
+
+# ------------------------------------------------------------
 # Progress file
 # ------------------------------------------------------------
 
-def write_progress(processed, total, words, running=True, output=None):
-    data = {'running': running, 'processed': processed, 'total': total, 'words': words}
+def write_progress(processed, total, words, running=True, output=None, existing_count=0):
+    data = {
+        'running': running,
+        'processed': processed,
+        'total': total,
+        'words': words,
+        'existing_count': existing_count,
+    }
     if output:
         data['output'] = output
     try:
@@ -214,13 +244,31 @@ def main():
     with open(INPUT_FILE, encoding='utf-8') as f:
         raw_words = [ln.strip() for ln in f if ln.strip() and not ln.startswith('#')]
 
-    total = len(raw_words)
-    print(f'{total} words  →  {output_path}', flush=True)
-    write_progress(0, total, [])
+    # Load any existing output so we can append rather than overwrite
+    existing_entries, known_bases = load_existing(output_path)
+    existing_count = len(existing_entries)
 
-    results = []
+    # Only process words that are not already in the output file
+    new_words = [w for w in raw_words if _base_form(w) not in known_bases]
+    total = len(new_words)
 
-    for i, raw in enumerate(raw_words, 1):
+    if existing_count:
+        print(f'Existing entries: {existing_count}  |  New to process: {total}  →  {output_path}',
+              flush=True)
+    else:
+        print(f'{total} words  →  {output_path}', flush=True)
+
+    if total == 0:
+        print('All input words are already in the output file — nothing to do.', flush=True)
+        write_progress(0, 0, [], running=False, output=output_path,
+                       existing_count=existing_count)
+        verify_output(raw_words, output_path)
+        return
+
+    write_progress(0, total, [], existing_count=existing_count)
+    new_entries = []
+
+    for i, raw in enumerate(new_words, 1):
         # Strip a leading article so the lookup hits the bare noun
         m = re.match(r'^(der|die|das)\s+(.+)$', raw, re.I)
         word = m.group(2) if m else raw
@@ -247,21 +295,25 @@ def main():
             word_field = word
 
         entry = {'word': word_field, 'definition': defn}
-        results.append(entry)
+        new_entries.append(entry)
 
         status = '✓' if defn else '?'
         print(f'[{i}/{total}] {status}  {raw} → {word_field}: {defn[:55]}', flush=True)
-        write_progress(i, total, results)
+        write_progress(i, total, new_entries, existing_count=existing_count)
 
-    # Write final output
+    # Append new entries to existing ones and save
+    final_entries = existing_entries + new_entries
     os.makedirs(os.path.dirname(os.path.abspath(output_path)), exist_ok=True)
     with open(output_path, 'w', encoding='utf-8') as f:
-        json.dump(results, f, ensure_ascii=False, indent=2)
+        json.dump(final_entries, f, ensure_ascii=False, indent=2)
 
-    print(f'\nSaved {len(results)} words → {output_path}', flush=True)
-    write_progress(total, total, results, running=False, output=output_path)
+    action = 'appended to' if existing_count else 'saved to'
+    print(f'\n{len(new_entries)} new words {action} {output_path} '
+          f'(total: {len(final_entries)})', flush=True)
+    write_progress(total, total, new_entries, running=False, output=output_path,
+                   existing_count=existing_count)
 
-    # Verify nothing was lost
+    # Verify all input words (old + new) are present in the final file
     verify_output(raw_words, output_path)
 
 
