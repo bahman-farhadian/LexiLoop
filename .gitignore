@@ -5,4 +5,3 @@ data/lexiloop.db
 videos/
 data/word_lists/.build_german_vocab_progress.json
 data/word_lists/.vocab_build_progress.json
-data/word_lists/word_to_json.txt

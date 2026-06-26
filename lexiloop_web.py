@@ -54,7 +54,7 @@ _build_proc = None
 WORD_LIST_DIR   = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data', 'word_lists')
 BUILDER_INPUT   = os.path.join(WORD_LIST_DIR, 'word_to_json.txt')
 BUILDER_PROGRESS = os.path.join(WORD_LIST_DIR, '.vocab_build_progress.json')
-BUILDER_SCRIPT  = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'build_german_vocab.py')
+BUILDER_SCRIPT  = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'utils', 'build_german_vocab.py')
 
 
 # --- Helpers shared with the per-word question handlers in lexiloop.py ---
