@@ -87,7 +87,6 @@ def build_question(session, word_id, word_text, definition, score):
         'band': band,
         'gender': gender_class(word_text),
     }
-    correct_letter = None
     initial_drill = None
     if band == 1:
         question['type'] = 'learning' if has_def else 'spelling'
@@ -114,7 +113,6 @@ def build_question(session, word_id, word_text, definition, score):
         'definition': definition,
         'score': score,
         'type': question['type'],
-        'correct_letter': correct_letter,
         'drill': initial_drill,  # pre-initialized for drill-mode band 1/2; None otherwise
     }
     return question
@@ -147,7 +145,6 @@ def start_session(user, lang, audio_lang=None, drill_mode=False):
         'lang_locale': SPEECH_LOCALES.get(_resolve_locale(voice_lang), ''),
         'batch': batch,
         'pool': pool,
-        'definition_pool': ll.build_definition_pool(words),
         'total': len(words),
         'graduated': 0,
         'practiced': 0,
@@ -190,7 +187,6 @@ def next_question(session):
             {'word_id': r[0], 'word_text': r[1], 'definition': r[2], 'score': r[3]}
             for r in fresh[n:]
         ]
-        session['definition_pool'] = ll.build_definition_pool(fresh)
         session['last_word_id'] = None
         batch = session['batch']
 
@@ -216,7 +212,6 @@ def next_question(session):
                 {'word_id': r[0], 'word_text': r[1], 'definition': r[2], 'score': r[3]}
                 for r in others[n:]
             ]
-            session['definition_pool'] = ll.build_definition_pool(fresh)
             session['last_word_id'] = None
         batch = session['batch']
 
@@ -354,12 +349,14 @@ def process_answer(session, answer):
         }
 
     if answer.startswith('@'):
-        ll.update_word_score(session['user'], session['lang'], cur['word_id'], 'mastered')
+        if not session.get('drill_mode'):
+            ll.update_word_score(session['user'], session['lang'], cur['word_id'], 'mastered')
         return advance(session, 'mastered', ll.FIXED_SCORES['mastered'],
                        f"Marked '{cur['word_text']}' as known.")
 
     if answer.startswith('!'):
-        ll.update_word_score(session['user'], session['lang'], cur['word_id'], 'flagged')
+        if not session.get('drill_mode'):
+            ll.update_word_score(session['user'], session['lang'], cur['word_id'], 'flagged')
         return advance(session, 'flagged', ll.FIXED_SCORES['flagged'],
                        f"Flagged '{cur['word_text']}' for more practice.")
 
@@ -683,7 +680,11 @@ class Handler(http.server.BaseHTTPRequestHandler):
             session = SESSIONS.get(session_id)
             if session is None:
                 return self._send_json({'error': 'unknown or expired session'}, 404)
-            result = process_answer(session, payload.get('answer', ''))
+            try:
+                result = process_answer(session, payload.get('answer', ''))
+            except Exception:
+                SESSIONS.pop(session_id, None)
+                return self._send_json({'error': 'Internal error processing answer'}, 500)
             if result.get('done'):
                 SESSIONS.pop(session_id, None)
             return self._send_json(result)

@@ -72,7 +72,6 @@
   const sessionType = document.getElementById('session-type');
   const wordDisplay = document.getElementById('word-display');
   const definitionLines = document.getElementById('definition-lines');
-  const optionsBlock = document.getElementById('options-block');
   const answerBlock = document.getElementById('answer-block');
   const answerInput = document.getElementById('answer-input');
   const drillBlock = document.getElementById('drill-block');
@@ -238,7 +237,6 @@
 
     if (question.type === 'production') {
       // Band 3: show definition + play audio; user types the word.
-      optionsBlock.style.display = 'none';
       answerBlock.style.display = 'flex';
       wordDisplay.classList.add('hidden-word');
       if (question.definition && question.definition.length) {
@@ -252,14 +250,12 @@
       answerInput.value = '';
       answerInput.focus();
     } else if (question.type === 'audio') {
-      optionsBlock.style.display = 'none';
       answerBlock.style.display = 'flex';
       wordDisplay.classList.add('hidden-word');
       answerInput.value = '';
       speak(question.word, langLocale);
       answerInput.focus();
     } else if (question.type === 'spelling') {
-      optionsBlock.style.display = 'none';
       answerBlock.style.display = 'flex';
       wordDisplay.classList.remove('hidden-word');
       answerInput.value = '';
@@ -272,7 +268,6 @@
       }, 700);
     } else {
       // learning
-      optionsBlock.style.display = 'none';
       answerBlock.style.display = 'flex';
       wordDisplay.classList.remove('hidden-word');
       answerInput.value = '';
@@ -300,10 +295,6 @@
       sendAnswer(value);
       return;
     }
-    submitAnswer(value);
-  }
-
-  function submitAnswer(value) {
     sendAnswer(value);
   }
 
@@ -365,7 +356,6 @@
   function showDrill(drill) {
     drillActive = true;
     drillBlock.style.display = 'block';
-    optionsBlock.style.display = 'none';
     answerBlock.style.display = 'flex';
     setActionButtons(false);
 
