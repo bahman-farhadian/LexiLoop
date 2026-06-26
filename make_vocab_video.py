@@ -161,7 +161,7 @@ def main():
     parser.add_argument("--audio-lang",
         help="Override the language used for voice selection (e.g. 'german' when --lang is 'german_home').")
     parser.add_argument("--word-list", help="Path to the word list JSON (default: data/word_lists/<user>_<lang>.json).")
-    parser.add_argument("--output", default="vocab_video.mp4", help="Output video path (default: vocab_video.mp4).")
+    parser.add_argument("--output", default=None, help="Output video path (default: videos/<user>_<lang>.mp4).")
     parser.add_argument("--number", type=int, help="Only include the first N words.")
     parser.add_argument("--repeats", type=int, default=4, help="Times to say each word (default: 4).")
     parser.add_argument("--speed", type=float, default=1.0, help="Audio speed, e.g. 0.8 for slower (default: 1.0).")
@@ -171,6 +171,10 @@ def main():
     lang = ll.sanitize_name(args.lang, "lang")
     audio_lang = ll.sanitize_name(args.audio_lang, "audio_lang") if args.audio_lang else None
     word_list_path = args.word_list or ll.word_list_path(user, lang)
+
+    videos_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "videos")
+    os.makedirs(videos_dir, exist_ok=True)
+    output_path = args.output or os.path.join(videos_dir, f"{user}_{lang}.mp4")
 
     if not os.path.exists(word_list_path):
         print(f"Error: word list not found: {word_list_path}", file=sys.stderr)
@@ -206,10 +210,10 @@ def main():
         run([
             "ffmpeg", "-y",
             "-f", "concat", "-safe", "0", "-i", concat_list,
-            "-c", "copy", args.output,
+            "-c", "copy", output_path,
         ])
 
-    print(f"Done: {args.output}")
+    print(f"Done: {output_path}")
 
 
 if __name__ == "__main__":

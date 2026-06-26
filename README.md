@@ -398,14 +398,17 @@ of the CLI/web UI and doesn't touch the database.
 ```bash
 chmod +x make_vocab_video.sh   # one-time, if not already executable
 
-# Simple list
-./make_vocab_video.sh --user bahman --lang german --output drill.mp4
+# Simple list — output goes to videos/bahman_german.mp4
+./make_vocab_video.sh --user bahman --lang german
 
 # Sub-list with audio language override (same pattern as practice --audio-lang)
-./make_vocab_video.sh --user bahman --lang german_home --audio-lang german --output drill.mp4
+./make_vocab_video.sh --user bahman --lang german_home --audio-lang german
 
 # Quick test: first 5 words only
-./make_vocab_video.sh --user bahman --lang german --number 5 --output test.mp4
+./make_vocab_video.sh --user bahman --lang german --number 5
+
+# Custom output path
+./make_vocab_video.sh --user bahman --lang german --output ~/Desktop/german_drill.mp4
 ```
 
 Each word is repeated (default `4` times), with a 1-second hold between
@@ -420,7 +423,7 @@ The flags match the `practice` command wherever applicable:
 | `--lang <name>` | Required. Word list name (e.g. `german_home`). |
 | `--audio-lang <lang>` | Override the language used for voice selection. Same as `practice --audio-lang`: use this when `--lang` is a sub-list name like `german_home` that doesn't auto-detect as a language. |
 | `--number <n>` | Only include the first `n` words (useful for a quick test). |
-| `--output <path>` | Output video file (default: `vocab_video.mp4`). |
+| `--output <path>` | Output video file (default: `videos/<user>_<lang>.mp4`). |
 | `--word-list <path>` | Override the word list path (default: `data/word_lists/<user>_<lang>.json`). |
 | `--repeats <n>` | How many times to say each word (default: `4`). |
 | `--speed <factor>` | Audio speed, e.g. `0.8` for slower, `1.2` for faster (default: `1.0`). |
