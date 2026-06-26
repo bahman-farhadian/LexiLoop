@@ -12,10 +12,10 @@
   <header>
     <h1>LexiLoop</h1>
     <nav>
-      <button data-view="practice" class="active">Practice</button>
-      <button data-view="report">Report</button>
-      <button data-view="lists">Word Lists</button>
-      <button data-view="about">About</button>
+      <button type="button" data-view="practice" class="active">Practice</button>
+      <button type="button" data-view="report">Report</button>
+      <button type="button" data-view="lists">Word Lists</button>
+      <button type="button" data-view="about">About</button>
     </nav>
   </header>
 
@@ -51,7 +51,7 @@
             <label><input id="practice-drill-mode" type="checkbox" style="width: auto; margin-right: 0.4rem;">Drill mode <span class="muted" style="font-weight:400;">(review high-score words, scores unchanged)</span></label>
           </div>
         </div>
-        <button id="start-session" class="primary">Start session</button>
+        <button id="start-session" class="primary" type="button">Start session</button>
       </div>
 
       <div id="practice-session" class="card" style="display: none;">
@@ -70,7 +70,7 @@
 
         <div id="answer-block" class="answer-row">
           <input id="answer-input" type="text" placeholder="Type your answer..." autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
-          <button id="submit-answer" class="primary">Submit</button>
+          <button id="submit-answer" type="button" class="primary">Submit</button>
         </div>
 
         <div id="drill-block" class="drill-box" style="display: none;">
@@ -84,12 +84,12 @@
         <div id="feedback" class="feedback"></div>
 
         <div class="action-bar">
-          <button id="btn-replay" class="shortcut" title="Replay audio">+</button>
-          <button id="btn-reveal" class="shortcut" title="Reveal the word">?</button>
-          <button id="btn-flag" class="shortcut" title="Flag as difficult (score &rarr; 1.0)">!</button>
-          <button id="btn-master" class="shortcut" title="Mark as known (score &rarr; 9.0)">@</button>
-          <button id="btn-drill" class="shortcut" title="Drill 9x in a row (score &rarr; 5.0)">$</button>
-          <button id="btn-end" class="shortcut" title="End session">!!</button>
+          <button id="btn-replay" type="button" class="shortcut" title="Replay audio">+</button>
+          <button id="btn-reveal" type="button" class="shortcut" title="Reveal the word">?</button>
+          <button id="btn-flag" type="button" class="shortcut" title="Flag as difficult (score &rarr; 1.0)">!</button>
+          <button id="btn-master" type="button" class="shortcut" title="Mark as known (score &rarr; 9.0)">@</button>
+          <button id="btn-drill" type="button" class="shortcut" title="Drill 9x in a row (score &rarr; 5.0)">$</button>
+          <button id="btn-end" type="button" class="shortcut" title="End session">!!</button>
         </div>
         <div class="shortcut-hint">
           Tip: type <code>+</code>/<code>?</code>/<code>!</code>/<code>@</code>/<code>$</code>/<code>!!</code>
@@ -101,7 +101,7 @@
       <div id="practice-summary" class="card" style="display: none;">
         <h2>Session summary</h2>
         <div id="summary-body"></div>
-        <button id="summary-restart" class="primary">Back to setup</button>
+        <button id="summary-restart" type="button" class="primary">Back to setup</button>
       </div>
     </section>
 
@@ -124,7 +124,7 @@
             </select>
           </div>
         </div>
-        <button id="load-report" class="primary">Load report</button>
+        <button id="load-report" type="button" class="primary">Load report</button>
         <p class="muted" style="margin-top: 0.75rem;">
           Add a language to also see that word list's words, scores, and
           practice stats below.
@@ -152,7 +152,7 @@
             <input id="init-lang" type="text" placeholder="your language" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
           </div>
         </div>
-        <button id="init-create" class="primary">Create</button>
+        <button id="init-create" type="button" class="primary">Create</button>
       </div>
 
       <div class="card">
@@ -172,7 +172,7 @@
             </select>
           </div>
         </div>
-        <button id="editor-load" class="secondary">Load</button>
+        <button id="editor-load" type="button" class="secondary">Load</button>
         <div id="editor-table-wrap" style="display: none;">
           <table id="editor-table" class="editor-table">
             <thead>
@@ -181,8 +181,8 @@
             <tbody id="editor-body"></tbody>
           </table>
           <div class="editor-actions">
-            <button id="editor-add-row" class="secondary">+ Add word</button>
-            <button id="editor-save" class="primary">Save</button>
+            <button id="editor-add-row" type="button" class="secondary">+ Add word</button>
+            <button id="editor-save" type="button" class="primary">Save</button>
           </div>
           <p class="muted">
             Saves directly to <code>data/word_lists/&lt;user&gt;_&lt;lang&gt;.json</code>
@@ -218,7 +218,7 @@
           single session naturally mixes new words with ones you're
           reviewing. Get it right and the score goes up (and the question
           gets harder); get it wrong and it drops back down. See the
-          <button class="link-btn" data-view-link="report">Report</button>
+          <button type="button" class="link-btn" data-view-link="report">Report</button>
           tab for your history, or read the full scoring breakdown in the
           project's README.
         </p>
@@ -237,7 +237,7 @@
 
         <h3>Tracking your progress</h3>
         <p>
-          The <button class="link-btn" data-view-link="report">Report</button>
+          The <button type="button" class="link-btn" data-view-link="report">Report</button>
           tab shows your session history &mdash; sessions, time spent, words
           practiced, and correct/incorrect/drilled counts, per day and in
           total. Add a language there too, and you'll also see that word
@@ -262,7 +262,7 @@
 
         <h3>Customizing your word lists</h3>
         <p>
-          Use the <button class="link-btn" data-view-link="lists">Word
+          Use the <button type="button" class="link-btn" data-view-link="lists">Word
           Lists</button> tab to create a new list and edit its words and
           definitions directly &mdash; no JSON editing required. Each word
           can have up to two definitions (e.g. an English meaning and a

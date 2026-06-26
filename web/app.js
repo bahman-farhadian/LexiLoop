@@ -47,7 +47,9 @@
   function speak(text, locale) {
     if (!('speechSynthesis' in window)) return;
     if (!document.getElementById('practice-audio').checked) return;
-    window.speechSynthesis.cancel();
+    // Never call cancel() — on macOS, cancel() always triggers NSBeep
+    // regardless of whether speech is active. Let utterances queue and
+    // the 700–1400 ms delay between questions clears them naturally.
     const utter = new SpeechSynthesisUtterance(text);
     if (locale) utter.lang = locale;
     window.speechSynthesis.speak(utter);
@@ -58,7 +60,7 @@
   let langLocale = '';
   let currentQuestion = null;
   let drillActive = false;
-  let selectedOption = null;
+  let answering = false;
 
   const setupCard = document.getElementById('practice-setup');
   const sessionCard = document.getElementById('practice-session');
@@ -106,6 +108,9 @@
   document.getElementById('submit-answer').addEventListener('click', submitTextAnswer);
   answerInput.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') { e.preventDefault(); submitTextAnswer(); }
+    // Prevent Tab from escaping the input to action buttons; Backspace is
+    // handled in the input so no need to guard it here.
+    if (e.key === 'Tab') { e.preventDefault(); }
   });
 
   btnReplay.addEventListener('click', replayAudio);
@@ -140,6 +145,17 @@
       e.preventDefault();
       document.getElementById('summary-restart').click();
     }
+  });
+
+  // During an active session, prevent Backspace from triggering browser
+  // back-navigation when no input element is focused (macOS produces a
+  // system alert sound when the browser tries to go back with no history).
+  document.addEventListener('keydown', (e) => {
+    if (e.key !== 'Backspace') return;
+    if (!sessionId) return;
+    const tag = document.activeElement?.tagName;
+    if (tag === 'INPUT' || tag === 'TEXTAREA') return;
+    e.preventDefault();
   });
 
   // 1/2/3/4 keyboard shortcuts for meaning (multiple-choice) questions.
@@ -190,7 +206,7 @@
   function renderQuestion(question, progress) {
     currentQuestion = question;
     drillActive = false;
-    selectedOption = null;
+    answering = false;
     feedback.textContent = '';
     feedback.className = 'feedback';
     drillBlock.style.display = 'none';
@@ -251,9 +267,10 @@
       });
       wordDisplay.classList.remove('hidden-word');
       speak(question.word, langLocale);
-      // No auto-focus — user interacts via click or 1/2/3/4 keys.
+      // MCQ: no auto-focus. User clicks or uses 1/2/3/4 keys. Focusing a
+      // button here would cause dings for letter-key presses on macOS.
     } else if (question.type === 'production') {
-      // Drill mode: show definition + play audio; user types the word.
+      // Band 3: show definition + play audio; user types the word.
       optionsBlock.style.display = 'none';
       answerBlock.style.display = 'flex';
       wordDisplay.classList.add('hidden-word');
@@ -266,18 +283,21 @@
       }
       speak(question.word, langLocale);
       answerInput.value = '';
+      answerInput.focus();
     } else if (question.type === 'audio') {
       optionsBlock.style.display = 'none';
       answerBlock.style.display = 'flex';
       wordDisplay.classList.add('hidden-word');
       answerInput.value = '';
       speak(question.word, langLocale);
+      answerInput.focus();
     } else if (question.type === 'spelling') {
       optionsBlock.style.display = 'none';
       answerBlock.style.display = 'flex';
       wordDisplay.classList.remove('hidden-word');
       answerInput.value = '';
       speak(question.word, langLocale);
+      answerInput.focus();
       setTimeout(() => {
         if (currentQuestion === question) {
           wordDisplay.classList.add('hidden-word');
@@ -290,6 +310,7 @@
       wordDisplay.classList.remove('hidden-word');
       answerInput.value = '';
       speak(question.word, langLocale);
+      answerInput.focus();
     }
   }
 
@@ -320,7 +341,9 @@
   }
 
   async function sendAnswer(answer) {
-    if (!sessionId) return;
+    if (!sessionId || answering) return;
+    answering = true;
+    setActionButtons(false);
     try {
       const data = await api('/api/practice/answer', {
         method: 'POST',
@@ -329,12 +352,15 @@
       });
       handleAnswerResult(data);
     } catch (err) {
+      answering = false;
+      setActionButtons(true);
       showError(practiceError, err.message);
     }
   }
 
   function handleAnswerResult(data) {
     if (data.result === 'drill_start' || data.result === 'drill_progress') {
+      answering = false;
       showDrill(data.drill);
       return;
     }
@@ -354,11 +380,11 @@
     }
 
     // Replay the word's audio after every correct/incorrect answer.
-    const replayAudio = (data.result === 'correct' || data.result === 'incorrect')
+    const shouldPlayAudio = (data.result === 'correct' || data.result === 'incorrect')
       && currentQuestion && document.getElementById('practice-audio')?.checked;
-    if (replayAudio) speak(currentQuestion.word, langLocale);
+    if (shouldPlayAudio) speak(currentQuestion.word, langLocale);
 
-    const delay = replayAudio ? 1400 : 700;
+    const delay = shouldPlayAudio ? 1400 : 700;
 
     if (data.done) {
       setTimeout(() => showSummary(data.session), delay);
@@ -678,6 +704,7 @@
     });
     const td = document.createElement('td');
     const removeBtn = document.createElement('button');
+    removeBtn.type = 'button';
     removeBtn.className = 'secondary';
     removeBtn.textContent = '×';
     removeBtn.title = 'Remove';
@@ -736,7 +763,7 @@
   document.getElementById('init-create').addEventListener('click', createWordList);
   ['init-user', 'init-lang'].forEach((id) => {
     document.getElementById(id).addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') createWordList();
+      if (e.key === 'Enter') { e.preventDefault(); createWordList(); }
     });
   });
 })();
