@@ -737,6 +737,10 @@ def start_practice_session(user, lang, words_for_session, audio, audio_lang=None
                 print(f"{word_header} {message}")
                 time.sleep(1.2)
 
+            # Stop before the next question would be the same word twice in a row.
+            if len(active_batch) <= 1 and not pool:
+                break
+
     except KeyboardInterrupt:
         print("\n\nSession ended early (Ctrl+C). Saving progress...")
 
@@ -932,9 +936,9 @@ Developed by Bahman Farhadian.
     practice_parser = subparsers.add_parser('practice', help="Start a practice session.")
     practice_parser.add_argument('--user', required=True, help="Username (lowercase letters, digits, underscores).")
     practice_parser.add_argument('--lang', required=True, help="Word list / language to practice.")
-    practice_parser.add_argument('--number', type=int, default=20,
-                                  help="Total pool size for the session (default: 20). Words are loaded in\n"
-                                       "order of priority (lowest score first) up to this limit.")
+    practice_parser.add_argument('--number', type=int, default=4,
+                                  help="Words per session (default: 4). The session asks these words in rotation\n"
+                                       "until all 16 questions are answered or all words are mastered.")
     practice_parser.add_argument('--batch', type=int, default=4,
                                   help="Active batch size (default: 4). This many words are worked on at once;\n"
                                        "a new word is introduced from the pool only when one is mastered (score 9).")

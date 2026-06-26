@@ -224,7 +224,9 @@ def advance(session, status, new_score, message, attempt=None):
             break
 
     limit_reached = session['practiced'] >= session['max_questions']
-    nxt = None if limit_reached else next_question(session)
+    # Stop if the batch can't rotate — next question would repeat the same word.
+    cant_rotate = len(session['batch']) <= 1 and not session['pool']
+    nxt = None if (limit_reached or cant_rotate) else next_question(session)
     if nxt is None:
         result['done'] = True
         result['session'] = finalize_session(session)
