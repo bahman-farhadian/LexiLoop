@@ -129,21 +129,19 @@ sense to you (e.g. `german_home`, `english_b2`).
 
 **Generated from the Language Learning decks**
 ([github.com/vbvss199/Language-Learning-decks](https://github.com/vbvss199/Language-Learning-decks)):
-- `bahman_german_a1.json` — 681 German words (A1)
-- `bahman_german_a2.json` — 2 060 German words (A2)
-- `bahman_german_b1.json` — 6 449 German words (B1)
-- `bahman_german_b2.json` — 8 288 German words (B2)
-- `bahman_german_c1.json` — 2 771 German words (C1)
-- `bahman_english_a1.json` — 634 English words (A1)
-- `bahman_english_a2.json` — 1 694 English words (A2)
-- `bahman_english_b1.json` — 4 667 English words (B1)
-- `bahman_english_b2.json` — 8 549 English words (B2)
-- `bahman_english_c1.json` — 4 857 English words (C1)
 
-Each entry has the English translation and a bilingual example sentence
-(German deck) or an English example sentence (English deck). German nouns are
-prefixed with their article (`der`/`die`/`das`). You can regenerate or extend
-these files with `utils/generate_lexiloop_json.py` — see
+*Vocabulary files* — word (with `der`/`die`/`das` for German nouns) + English translation + bilingual example sentence:
+- `bahman_german_a1.json` — 681 words (A1) … `bahman_german_c1.json` — 2 771 words (C1)
+- `bahman_english_a1.json` — 634 words (A1) … `bahman_english_c1.json` — 4 857 words (C1)
+
+*Sentence files* — practice full sentences: word = German sentence, definition = English translation:
+- `bahman_german_sentences_a1.json` — 681 sentences (A1)
+- `bahman_german_sentences_a2.json` — 2 060 sentences (A2)
+- `bahman_german_sentences_b1.json` — 6 449 sentences (B1)
+- `bahman_german_sentences_b2.json` — 8 288 sentences (B2)
+- `bahman_german_sentences_c1.json` — 2 771 sentences (C1)
+
+Regenerate any of these with `utils/generate_lexiloop_json.py` — see
 [Generating word lists from the source decks](#generating-word-lists-from-the-source-decks) below.
 
 For sub-list names that don't auto-detect as a language (e.g.
@@ -162,22 +160,28 @@ German nouns also carry their grammatical gender.
 files, one per CEFR level:
 
 ```bash
-# Generate all CEFR levels for German
+# Vocabulary mode — word + translation + example sentence
 python3 utils/generate_lexiloop_json.py --lang german --user bahman
-
-# Generate all CEFR levels for English
 python3 utils/generate_lexiloop_json.py --lang english --user bahman
 
-# One level only
+# Sentence mode — practice full sentences (German deck only)
+python3 utils/generate_lexiloop_json.py --lang german --user bahman --sentences
+
+# Single CEFR level
 python3 utils/generate_lexiloop_json.py --lang german --user bahman --cefr B1
+python3 utils/generate_lexiloop_json.py --lang german --user bahman --sentences --cefr A1
 ```
 
-Output files land in `data/word_lists/` as `<user>_<lang>_<level>.json`
-(e.g. `bahman_german_b1.json`). Each entry has:
-- **word** — bare word for verbs/adjectives/etc.; `der`/`die`/`das` +
-  word for German nouns.
-- **definition** — English translation on line 1; bilingual example
-  sentence (`native sentence — English sentence`) on line 2.
+**Vocabulary mode** output: `<user>_<lang>_<level>.json` (e.g. `bahman_german_b1.json`)
+- **word** — bare word for verbs/adjectives; `der`/`die`/`das` + word for German nouns.
+- **definition** — English translation on line 1; `"German sentence — English sentence"` on line 2.
+
+**Sentence mode** output: `<user>_<lang>_sentences_<level>.json` (e.g. `bahman_german_sentences_a1.json`)
+- **word** — the German example sentence (e.g. `"Er will Arzt sein."`)
+- **definition** — the English translation (e.g. `"He wants to be a doctor."`)
+
+Each German sentence is paired with its own English translation from the same
+source record, so the mapping is always exact.
 
 To update the source decks, replace `german.json` / `english.json` with the
 latest versions from the GitHub repository above, then re-run the script.
