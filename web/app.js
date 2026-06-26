@@ -103,6 +103,7 @@
   document.getElementById('summary-restart').addEventListener('click', () => {
     summaryCard.style.display = 'none';
     setupCard.style.display = 'block';
+    document.getElementById('start-session').focus();
   });
   document.getElementById('submit-answer').addEventListener('click', submitTextAnswer);
   answerInput.addEventListener('keydown', (e) => {
