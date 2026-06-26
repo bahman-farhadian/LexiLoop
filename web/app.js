@@ -160,7 +160,7 @@
     const langInput = document.getElementById('practice-lang');
     const user = userInput.value.trim();
     const lang = langInput.value.trim();
-    const audioLang = document.getElementById('practice-audio-lang').value.trim() || undefined;
+    const audioLang = (document.getElementById('practice-audio-lang')?.value ?? '').trim() || undefined;
     const number = parseInt(document.getElementById('practice-number').value, 10) || 20;
     if (!user || !lang) {
       showError(practiceError, 'User and language are required.');

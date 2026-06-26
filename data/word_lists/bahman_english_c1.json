@@ -25,7 +25,7 @@
   },
   {
     "word": "abuse",
-    "definition": "n, , v"
+    "definition": "n, v"
   },
   {
     "word": "academy",
@@ -149,7 +149,7 @@
   },
   {
     "word": "advocate",
-    "definition": "n, , v"
+    "definition": "n, v"
   },
   {
     "word": "aesthetic",
@@ -181,7 +181,7 @@
   },
   {
     "word": "alert",
-    "definition": "v, , n., adj"
+    "definition": "v, n., adj"
   },
   {
     "word": "alien",
@@ -197,7 +197,7 @@
   },
   {
     "word": "alike",
-    "definition": "adv, , adj"
+    "definition": "adv, adj"
   },
   {
     "word": "allegation",
@@ -237,7 +237,7 @@
   },
   {
     "word": "amateur",
-    "definition": "adj, , n"
+    "definition": "adj, n"
   },
   {
     "word": "ambassador",
@@ -349,7 +349,7 @@
   },
   {
     "word": "assault",
-    "definition": "n, , v"
+    "definition": "n, v"
   },
   {
     "word": "assemble",
@@ -393,7 +393,7 @@
   },
   {
     "word": "attribute",
-    "definition": "v, , n"
+    "definition": "v, n"
   },
   {
     "word": "audit",
@@ -453,6 +453,10 @@
   },
   {
     "word": "barrel",
+    "definition": "n"
+  },
+  {
+    "word": "bass1",
     "definition": "n"
   },
   {
@@ -525,7 +529,7 @@
   },
   {
     "word": "blast",
-    "definition": "n, , v"
+    "definition": "n, v"
   },
   {
     "word": "bleed",
@@ -533,7 +537,7 @@
   },
   {
     "word": "blend",
-    "definition": "v, , n"
+    "definition": "v, n"
   },
   {
     "word": "bless",
@@ -564,8 +568,12 @@
     "definition": "n"
   },
   {
+    "word": "bow1",
+    "definition": "v, n"
+  },
+  {
     "word": "breach",
-    "definition": "n, , v"
+    "definition": "n, v"
   },
   {
     "word": "breakdown",
@@ -577,7 +585,7 @@
   },
   {
     "word": "breed",
-    "definition": "v, , n"
+    "definition": "v, n"
   },
   {
     "word": "broadband",
@@ -741,7 +749,7 @@
   },
   {
     "word": "civilian",
-    "definition": "n, , adj"
+    "definition": "n, adj"
   },
   {
     "word": "clarity",
@@ -817,7 +825,7 @@
   },
   {
     "word": "combat",
-    "definition": "n, , v"
+    "definition": "n, v"
   },
   {
     "word": "commence",
@@ -913,7 +921,7 @@
   },
   {
     "word": "compromise",
-    "definition": "n, , v"
+    "definition": "n, v"
   },
   {
     "word": "compute",
@@ -1005,7 +1013,7 @@
   },
   {
     "word": "consent",
-    "definition": "n, , v"
+    "definition": "n, v"
   },
   {
     "word": "conserve",
@@ -1060,6 +1068,10 @@
     "definition": "n"
   },
   {
+    "word": "content2",
+    "definition": "adj"
+  },
+  {
     "word": "contention",
     "definition": "n"
   },
@@ -1077,7 +1089,7 @@
   },
   {
     "word": "contrary",
-    "definition": "adj, , n"
+    "definition": "adj, n"
   },
   {
     "word": "contributor",
@@ -1180,6 +1192,10 @@
     "definition": "n"
   },
   {
+    "word": "counter (argue against)",
+    "definition": "v"
+  },
+  {
     "word": "counterpart",
     "definition": "n"
   },
@@ -1241,7 +1257,7 @@
   },
   {
     "word": "cult",
-    "definition": "n, , adj"
+    "definition": "n, adj"
   },
   {
     "word": "cultivate",
@@ -1549,7 +1565,7 @@
   },
   {
     "word": "dispute",
-    "definition": "n, , v"
+    "definition": "n, v"
   },
   {
     "word": "disrupt",
@@ -1577,7 +1593,7 @@
   },
   {
     "word": "distress",
-    "definition": "n, , v"
+    "definition": "n, v"
   },
   {
     "word": "disturbing",
@@ -1661,11 +1677,11 @@
   },
   {
     "word": "ease",
-    "definition": "n, , v"
+    "definition": "n, v"
   },
   {
     "word": "echo",
-    "definition": "v, , n"
+    "definition": "v, n"
   },
   {
     "word": "ecological",
@@ -1881,7 +1897,7 @@
   },
   {
     "word": "excess",
-    "definition": "n, , adj"
+    "definition": "n, adj"
   },
   {
     "word": "exclusion",
@@ -1941,7 +1957,7 @@
   },
   {
     "word": "explosive",
-    "definition": "adj, , n"
+    "definition": "adj, n"
   },
   {
     "word": "extract",
@@ -1989,7 +2005,7 @@
   },
   {
     "word": "feminist",
-    "definition": "adj, , n"
+    "definition": "adj, n"
   },
   {
     "word": "fibre",
@@ -2005,11 +2021,11 @@
   },
   {
     "word": "filter",
-    "definition": "n, , v"
+    "definition": "n, v"
   },
   {
     "word": "fine",
-    "definition": "n, , v"
+    "definition": "n, v"
   },
   {
     "word": "firearm",
@@ -2137,7 +2153,7 @@
   },
   {
     "word": "gaze",
-    "definition": "n, , v"
+    "definition": "n, v"
   },
   {
     "word": "gear",
@@ -2153,7 +2169,7 @@
   },
   {
     "word": "glance",
-    "definition": "n, , v"
+    "definition": "n, v"
   },
   {
     "word": "glimpse",
@@ -2177,7 +2193,15 @@
   },
   {
     "word": "grasp",
-    "definition": "v, , n"
+    "definition": "v, n"
+  },
+  {
+    "word": "grave (for dead person)",
+    "definition": "n"
+  },
+  {
+    "word": "grave (serious)",
+    "definition": "adj"
   },
   {
     "word": "gravity",
@@ -2193,7 +2217,7 @@
   },
   {
     "word": "grin",
-    "definition": "v, , n"
+    "definition": "v, n"
   },
   {
     "word": "grind",
@@ -2201,7 +2225,7 @@
   },
   {
     "word": "grip",
-    "definition": "n, , v"
+    "definition": "n, v"
   },
   {
     "word": "gross",
@@ -2233,7 +2257,7 @@
   },
   {
     "word": "halt",
-    "definition": "v, , n"
+    "definition": "v, n"
   },
   {
     "word": "handful",
@@ -2265,7 +2289,7 @@
   },
   {
     "word": "harvest",
-    "definition": "n, , v"
+    "definition": "n, v"
   },
   {
     "word": "hatred",
@@ -2297,7 +2321,7 @@
   },
   {
     "word": "hint",
-    "definition": "n, , v"
+    "definition": "n, v"
   },
   {
     "word": "homeland",
@@ -2533,7 +2557,7 @@
   },
   {
     "word": "insult",
-    "definition": "n, , v"
+    "definition": "n, v"
   },
   {
     "word": "intact",
@@ -2601,7 +2625,7 @@
   },
   {
     "word": "interior",
-    "definition": "adj, , n"
+    "definition": "adj, n"
   },
   {
     "word": "intermediate",
@@ -2717,7 +2741,7 @@
   },
   {
     "word": "latter",
-    "definition": "adj, , n"
+    "definition": "adj, n"
   },
   {
     "word": "lawn",
@@ -2733,11 +2757,11 @@
   },
   {
     "word": "leak",
-    "definition": "v, , n"
+    "definition": "v, n"
   },
   {
     "word": "leap",
-    "definition": "v, , n"
+    "definition": "v, n"
   },
   {
     "word": "legacy",
@@ -2785,7 +2809,7 @@
   },
   {
     "word": "liberal",
-    "definition": "adj, , n"
+    "definition": "adj, n"
   },
   {
     "word": "liberation",
@@ -2837,11 +2861,11 @@
   },
   {
     "word": "lobby",
-    "definition": "n, , v"
+    "definition": "n, v"
   },
   {
     "word": "log",
-    "definition": "n, , v"
+    "definition": "n, v"
   },
   {
     "word": "logic",
@@ -2893,7 +2917,7 @@
   },
   {
     "word": "mainstream",
-    "definition": "n, , adj"
+    "definition": "n, adj"
   },
   {
     "word": "maintenance",
@@ -2925,7 +2949,7 @@
   },
   {
     "word": "march",
-    "definition": "n, , v"
+    "definition": "n, v"
   },
   {
     "word": "marginal",
@@ -2953,7 +2977,7 @@
   },
   {
     "word": "mature",
-    "definition": "adj, , v"
+    "definition": "adj, v"
   },
   {
     "word": "maximize",
@@ -3037,7 +3061,7 @@
   },
   {
     "word": "militant",
-    "definition": "n, , adj"
+    "definition": "n, adj"
   },
   {
     "word": "militia",
@@ -3062,6 +3086,10 @@
   {
     "word": "ministry",
     "definition": "n"
+  },
+  {
+    "word": "minute2",
+    "definition": "adj"
   },
   {
     "word": "miracle",
@@ -3145,7 +3173,7 @@
   },
   {
     "word": "neglect",
-    "definition": "v, , n"
+    "definition": "v, n"
   },
   {
     "word": "neighbouring",
@@ -3313,7 +3341,7 @@
   },
   {
     "word": "outrage",
-    "definition": "n, , v"
+    "definition": "n, v"
   },
   {
     "word": "outsider",
@@ -3397,7 +3425,7 @@
   },
   {
     "word": "patrol",
-    "definition": "n, , v"
+    "definition": "n, v"
   },
   {
     "word": "patron",
@@ -3445,7 +3473,7 @@
   },
   {
     "word": "pioneer",
-    "definition": "n, , v"
+    "definition": "n, v"
   },
   {
     "word": "pipeline",
@@ -3469,11 +3497,11 @@
   },
   {
     "word": "pledge",
-    "definition": "v, , n"
+    "definition": "v, n"
   },
   {
     "word": "plug",
-    "definition": "v, , n"
+    "definition": "v, n"
   },
   {
     "word": "plunge",
@@ -3633,7 +3661,7 @@
   },
   {
     "word": "probe",
-    "definition": "n, , v"
+    "definition": "n, v"
   },
   {
     "word": "problematic",
@@ -3749,11 +3777,11 @@
   },
   {
     "word": "pump",
-    "definition": "v, , n"
+    "definition": "v, n"
   },
   {
     "word": "punch",
-    "definition": "n, , v"
+    "definition": "n, v"
   },
   {
     "word": "query",
@@ -3781,11 +3809,11 @@
   },
   {
     "word": "raid",
-    "definition": "n, , v"
+    "definition": "n, v"
   },
   {
     "word": "rally",
-    "definition": "n, , v"
+    "definition": "n, v"
   },
   {
     "word": "ranking",
@@ -3793,7 +3821,7 @@
   },
   {
     "word": "rape",
-    "definition": "n, , v"
+    "definition": "n, v"
   },
   {
     "word": "ratio",
@@ -3821,7 +3849,7 @@
   },
   {
     "word": "rear",
-    "definition": "adj, , n"
+    "definition": "adj, n"
   },
   {
     "word": "reasoning",
@@ -3848,6 +3876,10 @@
     "definition": "n"
   },
   {
+    "word": "recount1",
+    "definition": "v"
+  },
+  {
     "word": "referendum",
     "definition": "n"
   },
@@ -3857,7 +3889,7 @@
   },
   {
     "word": "reform",
-    "definition": "n, , v"
+    "definition": "n, v"
   },
   {
     "word": "refuge",
@@ -3893,7 +3925,7 @@
   },
   {
     "word": "reign",
-    "definition": "n, , v"
+    "definition": "n, v"
   },
   {
     "word": "rejection",
@@ -4021,7 +4053,7 @@
   },
   {
     "word": "retreat",
-    "definition": "n, , v"
+    "definition": "n, v"
   },
   {
     "word": "retrieve",
@@ -4037,7 +4069,7 @@
   },
   {
     "word": "reverse",
-    "definition": "v, , n., adj"
+    "definition": "v, n., adj"
   },
   {
     "word": "revival",
@@ -4109,7 +4141,7 @@
   },
   {
     "word": "sacrifice",
-    "definition": "n, , v"
+    "definition": "n, v"
   },
   {
     "word": "saint",
@@ -4141,7 +4173,7 @@
   },
   {
     "word": "screw",
-    "definition": "v, , n"
+    "definition": "v, n"
   },
   {
     "word": "scrutiny",
@@ -4149,7 +4181,7 @@
   },
   {
     "word": "seal",
-    "definition": "v, , n"
+    "definition": "v, n"
   },
   {
     "word": "secular",
@@ -4245,7 +4277,7 @@
   },
   {
     "word": "sigh",
-    "definition": "v, , n"
+    "definition": "v, n"
   },
   {
     "word": "simulate",
@@ -4333,7 +4365,7 @@
   },
   {
     "word": "solo",
-    "definition": "adj, , n"
+    "definition": "adj, n"
   },
   {
     "word": "sound",
@@ -4349,7 +4381,7 @@
   },
   {
     "word": "span",
-    "definition": "v, , n"
+    "definition": "v, n"
   },
   {
     "word": "spare",
@@ -4389,7 +4421,7 @@
   },
   {
     "word": "spin",
-    "definition": "v, , n"
+    "definition": "v, n"
   },
   {
     "word": "spine",
@@ -4405,7 +4437,7 @@
   },
   {
     "word": "spy",
-    "definition": "n, , v"
+    "definition": "n, v"
   },
   {
     "word": "squad",
@@ -4449,7 +4481,7 @@
   },
   {
     "word": "stem",
-    "definition": "n, , v"
+    "definition": "n, v"
   },
   {
     "word": "stereotype",
@@ -4486,6 +4518,14 @@
   {
     "word": "striking",
     "definition": "adj"
+  },
+  {
+    "word": "strip (long narrow piece)",
+    "definition": "n"
+  },
+  {
+    "word": "strip (remove clothes/a layer)",
+    "definition": "v"
   },
   {
     "word": "strive",
@@ -4529,7 +4569,7 @@
   },
   {
     "word": "substitute",
-    "definition": "n, , v"
+    "definition": "n, v"
   },
   {
     "word": "substitution",
@@ -4597,7 +4637,7 @@
   },
   {
     "word": "supplement",
-    "definition": "n, , v"
+    "definition": "n, v"
   },
   {
     "word": "supportive",
@@ -4617,7 +4657,7 @@
   },
   {
     "word": "surge",
-    "definition": "n, , v"
+    "definition": "n, v"
   },
   {
     "word": "surgical",
@@ -4653,7 +4693,7 @@
   },
   {
     "word": "swing",
-    "definition": "v, , n"
+    "definition": "v, n"
   },
   {
     "word": "sword",
@@ -4821,7 +4861,7 @@
   },
   {
     "word": "torture",
-    "definition": "n, , v"
+    "definition": "n, v"
   },
   {
     "word": "toss",
@@ -4845,7 +4885,7 @@
   },
   {
     "word": "trail",
-    "definition": "n, , v"
+    "definition": "n, v"
   },
   {
     "word": "trailer",
@@ -4941,7 +4981,7 @@
   },
   {
     "word": "twist",
-    "definition": "v, , n"
+    "definition": "v, n"
   },
   {
     "word": "undergraduate",
@@ -4977,7 +5017,7 @@
   },
   {
     "word": "upgrade",
-    "definition": "v, , n"
+    "definition": "v, n"
   },
   {
     "word": "uphold",
@@ -5013,7 +5053,7 @@
   },
   {
     "word": "variable",
-    "definition": "n, , adj"
+    "definition": "n, adj"
   },
   {
     "word": "varied",
@@ -5025,7 +5065,7 @@
   },
   {
     "word": "venture",
-    "definition": "n, , v"
+    "definition": "n, v"
   },
   {
     "word": "verbal",
@@ -5117,7 +5157,7 @@
   },
   {
     "word": "warrant",
-    "definition": "n, , v"
+    "definition": "n, v"
   },
   {
     "word": "warrior",
@@ -5197,7 +5237,7 @@
   },
   {
     "word": "worship",
-    "definition": "n, , v"
+    "definition": "n, v"
   },
   {
     "word": "worthwhile",
@@ -5213,7 +5253,7 @@
   },
   {
     "word": "yield",
-    "definition": "n, , v"
+    "definition": "n, v"
   },
   {
     "word": "youngster",
