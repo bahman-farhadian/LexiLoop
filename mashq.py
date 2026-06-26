@@ -12,7 +12,7 @@ from datetime import date
 
 # --- Configuration ---
 DATA_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data')
-DATABASE_FILE = os.path.join(DATA_DIR, 'lexiloop.db')
+DATABASE_FILE = os.path.join(DATA_DIR, 'mashq.db')
 WORD_LISTS_DIR = os.path.join(DATA_DIR, 'word_lists')
 NAME_PATTERN = re.compile(r'^[a-z0-9_]+$')
 
@@ -265,7 +265,7 @@ def sync_word_list(user, lang):
     path = word_list_path(user, lang)
     if not os.path.isfile(path):
         raise FileNotFoundError(
-            f"Word list not found: {path}\nRun: lexiloop init --user {user} --lang {lang}"
+            f"Word list not found: {path}\nRun: mashq init --user {user} --lang {lang}"
         )
     with open(path, 'r', encoding='utf-8') as f:
         entries = json.load(f)
@@ -963,22 +963,22 @@ def cmd_report(args):
 
 def build_parser():
     parser = argparse.ArgumentParser(
-        prog='lexiloop',
+        prog='mashq',
         description="An interactive CLI tool for vocabulary practice with multi-user, multi-language word lists.",
         formatter_class=argparse.RawTextHelpFormatter,
         epilog="""
 Usage Examples:
   # First time setup for a user/language (creates word_lists/<user>_<lang>.json)
-  ./lexiloop.sh init --user bahman --lang german
+  ./mashq.sh init --user bahman --lang german
 
   # Start a practice session (4 words, 16 questions); audio on by default on macOS
-  ./lexiloop.sh practice --user bahman --lang german
+  ./mashq.sh practice --user bahman --lang german
 
   # Same, but without audio
-  ./lexiloop.sh practice --user bahman --lang german --no-audio
+  ./mashq.sh practice --user bahman --lang german --no-audio
 
   # View progress report
-  ./lexiloop.sh report --user bahman --lang german
+  ./mashq.sh report --user bahman --lang german
 
 How question types are chosen:
   Every word has a score from 1.0 (struggling) to 9.0 (mastered). Each
@@ -1013,7 +1013,7 @@ Developed by Bahman Farhadian.
     practice_parser.add_argument('--lang', required=True, help="Word list / language to practice.")
     practice_parser.add_argument('--no-audio', action='store_true',
                                   help="Disable speaking each word aloud (audio is on by default on macOS, via 'say';\n"
-                                       "has no effect on other platforms). LexiLoop tries to use a 'say' voice that\n"
+                                       "has no effect on other platforms). Mashq tries to use a 'say' voice that\n"
                                        "matches --lang (e.g. a German voice for --lang german).")
     practice_parser.add_argument('--audio-lang',
                                   help="Override the language used for voice/audio selection.\n"

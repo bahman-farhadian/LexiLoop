@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-make_vocab_video.py - generate a vocabulary-drill video from a LexiLoop word
+make_vocab_video.py - generate a vocabulary-drill video from a Mashq word
 list, using macOS 'say' for audio and ffmpeg for the video.
 
 For each word in the list, the output video shows the word and its meaning on
@@ -19,9 +19,9 @@ import subprocess
 import sys
 import tempfile
 
-# Allow running from utils/ — find lexiloop.py one level up
+# Allow running from utils/ — find mashq.py one level up
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), '..'))
-import lexiloop as ll
+import mashq as ll
 
 FONT_FILE = "/System/Library/Fonts/Supplemental/Arial Unicode.ttf"
 VIDEO_SIZE = "1280x720"

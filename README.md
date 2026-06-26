@@ -1,7 +1,7 @@
-# LexiLoop
+# Mashq
 
 An interactive command-line tool for vocabulary practice, with a SQLite-backed
-spaced-repetition scoring system. LexiLoop is **language-agnostic and
+spaced-repetition scoring system. Mashq is **language-agnostic and
 multi-user**: any user can maintain any number of word lists (one per
 language or topic), each entry being a word plus an optional definition (or
 multiple definitions, in any language). For example, an English word can have
@@ -10,7 +10,7 @@ practicing a new language while reviewing in your own.
 
 ## How it works
 
-- All data lives in a single local SQLite database (`data/lexiloop.db`).
+- All data lives in a single local SQLite database (`data/mashq.db`).
 - Each **user** has their own tables, and each **word list** (one per
   `--lang`) is its own table: `words_<user>_<lang>`.
 - Every word has a **score** from `1.0` (struggling) to `9.0` (mastered),
@@ -69,21 +69,21 @@ score: `@` master -> 9.0 (Production), `$` drill -> 5.0 (Audio), `!` flag ->
 
 ## Setup
 
-LexiLoop is a single Python file (`lexiloop.py`), run through the
-`lexiloop.sh` wrapper — don't call the `.py` file directly.
+Mashq is a single Python file (`mashq.py`), run through the
+`mashq.sh` wrapper — don't call the `.py` file directly.
 
 ```bash
-chmod +x lexiloop.sh   # one-time, if not already executable
+chmod +x mashq.sh   # one-time, if not already executable
 ```
 
 ### Create a word list for a user/language
 
 ```bash
-./lexiloop.sh init --user bahman --lang german
+./mashq.sh init --user bahman --lang german
 ```
 
 This creates `data/word_lists/bahman_german.json` (an empty array) and the
-corresponding tables in `data/lexiloop.db`. Edit the JSON file to add words,
+corresponding tables in `data/mashq.db`. Edit the JSON file to add words,
 then practice.
 
 ## Word list format
@@ -182,7 +182,7 @@ Entries without a valid CEFR level (A1–C2) are skipped by the generator; the r
 | katakana | B2 | 1 997 | 1 996 |
 | katakana | C1 | 561 | 560 |
 
-Regenerate any of these with `utils/generate_lexiloop_json.py` — see
+Regenerate any of these with `utils/generate_mashq_json.py` — see
 [Generating word lists from the source decks](#generating-word-lists-from-the-source-decks) below.
 
 All sub-list names (`german_a1`, `hiragana_b1`, etc.) don't auto-detect as a
@@ -190,8 +190,8 @@ language for audio. Always pass `--audio-lang` (CLI) or fill **Audio language**
 (web UI):
 
 ```bash
-./lexiloop.sh practice --user bahman --lang german_b1 --audio-lang german
-./lexiloop.sh practice --user erfan  --lang kanji_a1  --audio-lang japanese
+./mashq.sh practice --user bahman --lang german_b1 --audio-lang german
+./mashq.sh practice --user erfan  --lang kanji_a1  --audio-lang japanese
 ```
 
 ## Generating word lists from the source decks
@@ -199,28 +199,28 @@ language for audio. Always pass `--audio-lang` (CLI) or fill **Audio language**
 Source files in `data/word_lists/` come from
 [github.com/vbvss199/Language-Learning-decks](https://github.com/vbvss199/Language-Learning-decks).
 To update them, replace the relevant `.json` file with the latest version from
-that repository, then re-run `utils/generate_lexiloop_json.py`.
+that repository, then re-run `utils/generate_mashq_json.py`.
 
 Supported source files: `german.json`, `english.json`, `hiragana.json`,
 `kanji.json`, `katakana.json`.
 
 ```bash
 # Vocabulary mode — word + translation + bilingual example sentence
-python3 utils/generate_lexiloop_json.py --lang german   --user bahman
-python3 utils/generate_lexiloop_json.py --lang english  --user bahman
-python3 utils/generate_lexiloop_json.py --lang kanji    --user erfan
-python3 utils/generate_lexiloop_json.py --lang hiragana --user erfan
-python3 utils/generate_lexiloop_json.py --lang katakana --user erfan
+python3 utils/generate_mashq_json.py --lang german   --user bahman
+python3 utils/generate_mashq_json.py --lang english  --user bahman
+python3 utils/generate_mashq_json.py --lang kanji    --user erfan
+python3 utils/generate_mashq_json.py --lang hiragana --user erfan
+python3 utils/generate_mashq_json.py --lang katakana --user erfan
 
 # Sentence mode — word = native sentence, definition = English sentence
-python3 utils/generate_lexiloop_json.py --lang german --user bahman --sentences
-python3 utils/generate_lexiloop_json.py --lang kanji  --user erfan  --sentences
+python3 utils/generate_mashq_json.py --lang german --user bahman --sentences
+python3 utils/generate_mashq_json.py --lang kanji  --user erfan  --sentences
 
 # Single CEFR level only
-python3 utils/generate_lexiloop_json.py --lang german --user bahman --cefr B1
+python3 utils/generate_mashq_json.py --lang german --user bahman --cefr B1
 
 # Flashcard-quality entries only (filters to useful_for_flashcard=true)
-python3 utils/generate_lexiloop_json.py --lang kanji --user erfan --flashcard-only
+python3 utils/generate_mashq_json.py --lang kanji --user erfan --flashcard-only
 ```
 
 **Vocabulary mode** output: `<user>_<lang>_<level>.json`
@@ -237,7 +237,7 @@ source record, so the mapping is always exact.
 
 ## Renewing word lists
 
-Every time you run `practice` or `report --lang <lang>`, LexiLoop "renews"
+Every time you run `practice` or `report --lang <lang>`, Mashq "renews"
 that list from its JSON file:
 
 - New entries are added to the table (score `1.0`, fresh history).
@@ -267,7 +267,7 @@ flowchart TD
 ### Practice
 
 ```bash
-./lexiloop.sh practice --user bahman --lang german
+./mashq.sh practice --user bahman --lang german
 ```
 
 | Option | Description |
@@ -279,7 +279,7 @@ flowchart TD
 | `--drill` | Drill mode: every word in the session goes through the 9-repetition drill automatically, regardless of its score band. |
 | `--drill-mode` | Review drill: practice your highest-scored words without changing their scores. Only `times_drilled` is incremented. Good for reinforcing words you already know well. |
 
-Run `./lexiloop.sh practice --help` (or `report`/`init --help`) at any
+Run `./mashq.sh practice --help` (or `report`/`init --help`) at any
 time to see this same reference from the CLI itself.
 
 #### In-session commands
@@ -297,7 +297,7 @@ time to see this same reference from the CLI itself.
 ### Report
 
 ```bash
-./lexiloop.sh report --user bahman [--lang german]
+./mashq.sh report --user bahman [--lang german]
 ```
 
 | Option | Description |
@@ -313,7 +313,7 @@ printed per language the user has practiced.
 ### Init
 
 ```bash
-./lexiloop.sh init --user bahman --lang german
+./mashq.sh init --user bahman --lang german
 ```
 
 | Option | Description |
@@ -329,29 +329,29 @@ they don't already exist.
 Every command and flag is also documented in the CLI itself:
 
 ```bash
-./lexiloop.sh --help
-./lexiloop.sh practice --help
-./lexiloop.sh report --help
-./lexiloop.sh init --help
+./mashq.sh --help
+./mashq.sh practice --help
+./mashq.sh report --help
+./mashq.sh init --help
 ```
 
 ## Project structure
 
 ```
-lexiloop.py               # main script (single file)
-lexiloop.sh               # run through this wrapper, not python3 directly
-lexiloop_web.py           # web server (JSON API + static frontend)
-lexiloop_web.sh           # run through this wrapper, not python3 directly
+mashq.py               # main script (single file)
+mashq.sh               # run through this wrapper, not python3 directly
+mashq_web.py           # web server (JSON API + static frontend)
+mashq_web.sh           # run through this wrapper, not python3 directly
 utils/
-  make_vocab_video.py         # standalone: generate a vocab-drill video
-  generate_lexiloop_json.py   # generate word lists from source decks
+  make_mashq_video.py         # standalone: generate a vocab-drill video
+  generate_mashq_json.py   # generate word lists from source decks
 make_vocab_video.sh       # run through this wrapper
 web/
   index.html              # frontend markup
   style.css               # Catppuccin Mocha dark theme
   app.js                  # frontend logic
 data/
-  lexiloop.db             # SQLite database (auto-created)
+  mashq.db             # SQLite database (auto-created)
   word_lists/
     german.json           # source deck: 20 280 German words (A1–C2)
     english.json          # source deck: 20 708 English words (A1–C2)
@@ -360,13 +360,13 @@ data/
 
 ## Web UI
 
-LexiLoop also ships with a localhost-only web UI that uses the same
+Mashq also ships with a localhost-only web UI that uses the same
 SQLite database and scoring logic as the CLI - standard library only, no
 `pip install` or virtualenv needed.
 
 ```bash
-chmod +x lexiloop_web.sh   # one-time, if not already executable
-./lexiloop_web.sh
+chmod +x mashq_web.sh   # one-time, if not already executable
+./mashq_web.sh
 ```
 
 This starts a server at **http://127.0.0.1:9999/** (bound to localhost
@@ -400,7 +400,7 @@ The theme is dark, using the
 On macOS, every word is spoken aloud via the built-in `say` command —
 enabled by default, disable with `--no-audio`.
 
-- LexiLoop picks a `say` voice matching `--lang` when one is installed
+- Mashq picks a `say` voice matching `--lang` when one is installed
   (e.g. a German voice for `--lang german`, a French voice for
   `--lang french`), so words are pronounced in their own language rather
   than read with the system default voice's accent. If no matching voice is
@@ -411,7 +411,7 @@ enabled by default, disable with `--no-audio`.
   "Anna" variant, in order: `Anna (Premium)` > `Anna (Enhanced)` > `Anna`.
   Whichever of these is installed (check with `say -v '?' | grep -i anna`)
   is used.
-- For all other recognized languages, LexiLoop falls back to the first
+- For all other recognized languages, Mashq falls back to the first
   installed voice matching the locale prefix (e.g. first `fr_FR` voice for
   `--lang french`).
 - Recognized `--lang` names for voice matching include `english`, `german`/
@@ -424,7 +424,7 @@ enabled by default, disable with `--no-audio`.
   Spoken Content "Voice 1-4" picks (Siri/personal voices) are *not*
   addressable by name from the command line. This is different from
   downloadable premium voices like `Anna (Premium)`, which **are**
-  addressable via `say -v "Anna (Premium)"` and are what LexiLoop uses for
+  addressable via `say -v "Anna (Premium)"` and are what Mashq uses for
   German when installed.
 - During the `$` 9-repetition drill, the word is spoken before **every**
   repetition, not just once — useful for repeated listen-and-spell practice.
@@ -434,7 +434,7 @@ enabled by default, disable with `--no-audio`.
 
 ## Color-coded German genders
 
-For words that start with a German article, LexiLoop colors the word
+For words that start with a German article, Mashq colors the word
 according to its grammatical gender wherever it's displayed:
 
 | Article | Gender | Color |
@@ -474,27 +474,27 @@ words you get wrong (or leave idle) drift back down.
 
 ```bash
 # Practice session, German
-./lexiloop.sh practice --user bahman --lang german
+./mashq.sh practice --user bahman --lang german
 
 # Practice session, English
-./lexiloop.sh practice --user bahman --lang english
+./mashq.sh practice --user bahman --lang english
 
 # Silent session (e.g. in a quiet office) — disables macOS audio
-./lexiloop.sh practice --user bahman --lang german --no-audio
+./mashq.sh practice --user bahman --lang german --no-audio
 
 # Check today's and overall progress for a language
-./lexiloop.sh report --user bahman --lang german
+./mashq.sh report --user bahman --lang german
 
 # Check progress across all of a user's word lists
-./lexiloop.sh report --user bahman
+./mashq.sh report --user bahman
 
 # Add a new word list (e.g. for a new language or topic)
-./lexiloop.sh init --user bahman --lang french
+./mashq.sh init --user bahman --lang french
 ```
 
 ## Vocab drill video (optional side feature)
 
-`utils/make_vocab_video.py` is a standalone script that turns one of your
+`utils/make_mashq_video.py` is a standalone script that turns one of your
 word lists into a video: each word is shown (with its meaning) on a dark grey
 background while the audio is spoken several times in a row, so you can
 review a list "Memrise-flashcard" style in a video player. It's independent

@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
 """
-LexiLoop web server: a localhost-only JSON API + static frontend that wraps
-the same SQLite-backed scoring logic as the lexiloop.py CLI. Standard
+Mashq web server: a localhost-only JSON API + static frontend that wraps
+the same SQLite-backed scoring logic as the mashq.py CLI. Standard
 library only - no extra packages needed.
 
-Run via: ./lexiloop_web.sh   (serves http://127.0.0.1:9999)
+Run via: ./mashq_web.sh   (serves http://127.0.0.1:9999)
 """
 import os
 import sys
@@ -16,7 +16,7 @@ import urllib.parse
 import http.server
 import uuid
 
-import lexiloop as ll
+import mashq as ll
 
 HOST = '127.0.0.1'
 PORT = 9999
@@ -30,7 +30,7 @@ STATIC_FILES = {
     '/app.js': ('app.js', 'application/javascript; charset=utf-8'),
 }
 
-# Maps lexiloop's locale prefixes to BCP-47 tags the Web Speech API
+# Maps Mashq's locale prefixes to BCP-47 tags the Web Speech API
 # recognizes more reliably for voice selection.
 SPEECH_LOCALES = {
     'en': 'en-US', 'de': 'de-DE', 'fr': 'fr-FR', 'es': 'es-ES', 'it': 'it-IT',
@@ -53,7 +53,7 @@ DRILL_TARGET = 9
 SESSIONS = {}
 
 
-# --- Helpers shared with the per-word question handlers in lexiloop.py ---
+# --- Helpers shared with the per-word question handlers in mashq.py ---
 def gauge_dots(score):
     if score >= 9:
         return '●●●'
@@ -544,7 +544,7 @@ def init_word_list(user, lang):
 
 # --- HTTP server ---
 class Handler(http.server.BaseHTTPRequestHandler):
-    server_version = "LexiLoopWeb/0.2"
+    server_version = "MashqWeb/0.1"
 
     def log_message(self, fmt, *args):
         pass
@@ -698,14 +698,14 @@ def main():
     except OSError as e:
         if e.errno == errno.EADDRINUSE:
             print(f"Error: port {PORT} is already in use.")
-            print(f"  Another LexiLoop web server (or another process) is "
+            print(f"  Another Mashq web server (or another process) is "
                   f"probably already listening on http://{HOST}:{PORT}/.")
             print(f"  Find it with: lsof -i :{PORT}")
             print(f"  Stop it with: kill <PID>")
             sys.exit(1)
         raise
     db_path = os.path.abspath(ll.DATABASE_FILE)
-    print("LexiLoop web server starting...")
+    print("Mashq web server starting...")
     print(f"  Listening on : http://{HOST}:{PORT}/")
     print(f"  Database     : {db_path}")
     print("  Press Ctrl+C to stop.")
