@@ -44,15 +44,20 @@
   }
 
   // --- Speech (Web Speech API) ---
+  // Returns a Promise that resolves when the utterance finishes (or immediately
+  // if audio is off/unsupported). Never calls cancel() — on macOS that always
+  // triggers NSBeep regardless of whether speech is active.
   function speak(text, locale) {
-    if (!('speechSynthesis' in window)) return;
-    if (!document.getElementById('practice-audio').checked) return;
-    // Never call cancel() — on macOS, cancel() always triggers NSBeep
-    // regardless of whether speech is active. Let utterances queue and
-    // the 700–1400 ms delay between questions clears them naturally.
-    const utter = new SpeechSynthesisUtterance(text);
-    if (locale) utter.lang = locale;
-    window.speechSynthesis.speak(utter);
+    if (!('speechSynthesis' in window) || !document.getElementById('practice-audio').checked) {
+      return Promise.resolve();
+    }
+    return new Promise((resolve) => {
+      const utter = new SpeechSynthesisUtterance(text);
+      if (locale) utter.lang = locale;
+      utter.onend = resolve;
+      utter.onerror = resolve;
+      window.speechSynthesis.speak(utter);
+    });
   }
 
   // --- Practice state ---
@@ -327,20 +332,27 @@
       feedback.className = 'feedback info';
     }
 
-    // Replay the word's audio after every correct/incorrect answer.
+    // Replay the word's audio after every correct/incorrect answer,
+    // then advance only after the utterance finishes — so long sentences
+    // aren't cut off by a hardcoded timer.
     const shouldPlayAudio = (data.result === 'correct' || data.result === 'incorrect')
       && currentQuestion && document.getElementById('practice-audio')?.checked;
-    if (shouldPlayAudio) speak(currentQuestion.word, langLocale);
-
-    const delay = shouldPlayAudio ? 1400 : 700;
 
     if (data.done) {
-      setTimeout(() => showSummary(data.session), delay);
+      if (shouldPlayAudio) {
+        speak(currentQuestion.word, langLocale).then(() => showSummary(data.session));
+      } else {
+        setTimeout(() => showSummary(data.session), 700);
+      }
       return;
     }
 
     setActionButtons(true);
-    setTimeout(() => renderQuestion(data.question, data.progress), delay);
+    if (shouldPlayAudio) {
+      speak(currentQuestion.word, langLocale).then(() => renderQuestion(data.question, data.progress));
+    } else {
+      setTimeout(() => renderQuestion(data.question, data.progress), 700);
+    }
   }
 
   function showDrill(drill) {
