@@ -281,11 +281,6 @@ def process_answer(session, answer):
 
     correct = ll.answer_matches(answer, cur['word_text'])
 
-    if session.get('drill_mode'):
-        ll.record_as_drilled(session['user'], session['lang'], cur['word_id'])
-        msg = None if correct else f"Incorrect. The word was: {cur['word_text']}"
-        return advance(session, 'correct' if correct else 'incorrect', msg, attempt=answer)
-
     if correct:
         ll.update_word_score(session['user'], session['lang'], cur['word_id'],
                              'correct', cur['score'], cur['leitner_box'])
