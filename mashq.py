@@ -373,7 +373,9 @@ def update_word_score(user, lang, word_id, result_status, current_score=None, cu
     conn = get_connection()
     if result_status == 'correct':
         new_score = min(9.0, current_score + SCORE_DELTAS[score_band(current_score)])
-        new_box = min((current_box or 1) + 1, 5)
+        # Box advances only when the word reaches full mastery (score 9).
+        # Intermediate correct answers improve the score but leave the box unchanged.
+        new_box = min((current_box or 1) + 1, 5) if new_score >= 9.0 else (current_box or 1)
     elif result_status == 'incorrect':
         delta = BAND3_INCORRECT_DELTA if score_band(current_score) == 3 else INCORRECT_DELTA
         new_score = max(1.0, current_score - delta)
