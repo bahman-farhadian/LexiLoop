@@ -327,12 +327,9 @@
       feedback.className = 'feedback info';
     }
 
-    // Audio for correct/incorrect is spoken server-side (blocking) before
-    // the response is sent, so the page naturally waits. For non-audio or
-    // other result types, keep a brief visual pause.
-    const audioPlayed = (data.result === 'correct' || data.result === 'incorrect')
-      && document.getElementById('practice-audio').checked;
-    const delay = audioPlayed ? 0 : 700;
+    // Always pause after correct/incorrect so the user can read the feedback.
+    // Audio already finished server-side before this response arrived.
+    const delay = (data.result === 'correct' || data.result === 'incorrect') ? 700 : 0;
 
     if (data.done) {
       setTimeout(() => showSummary(data.session), delay);
