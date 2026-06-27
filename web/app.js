@@ -202,7 +202,7 @@
     if (question.drill_start) {
       const q = progress.questions ?? 0;
       const maxQ = progress.max_questions ?? '?';
-      sessionProgress.textContent = `Mastered ${progress.graduated ?? 0}/${progress.total} · Q${q}/${maxQ}`;
+      sessionProgress.textContent = `Correct ${progress.correct ?? 0}/${progress.total} · Q${q}/${maxQ}`;
       sessionGauge.textContent = `${question.gauge} (score: ${question.score.toFixed(1)})`;
       sessionGauge.className = `gauge band-${question.band}`;
       sessionType.textContent = 'Drill';
@@ -216,7 +216,7 @@
 
     const q = progress.questions ?? 0;
     const maxQ = progress.max_questions ?? '?';
-    sessionProgress.textContent = `Mastered ${progress.graduated ?? 0}/${progress.total} · Q${q}/${maxQ}`;
+    sessionProgress.textContent = `Correct ${progress.correct ?? 0}/${progress.total} · Q${q}/${maxQ}`;
     sessionGauge.textContent = `${question.gauge} (score: ${question.score.toFixed(1)})`;
     sessionGauge.className = `gauge band-${question.band}`;
     sessionType.textContent = TYPE_LABELS[question.type] || question.type;
@@ -501,11 +501,13 @@
     const card = document.createElement('div');
     card.className = 'card';
     let html = `<table><caption>Word list: ${escapeHtml(lang)}</caption>`;
-    html += '<thead><tr><th>Word</th><th>Score</th><th>Gauge</th><th>Practiced</th>'
-      + '<th>Correct</th><th>Wrong</th><th>Drilled</th><th>Flagged</th><th>Mastered</th></tr></thead><tbody>';
+    html += '<thead><tr><th>Word</th><th>Score</th><th>Gauge</th><th>Box</th><th>Next Review</th>'
+      + '<th>Practiced</th><th>Correct</th><th>Wrong</th><th>Drilled</th><th>Flagged</th><th>Mastered</th></tr></thead><tbody>';
     words.forEach((w) => {
+      const nextReview = w.next_review ?? 'now';
       html += `<tr${w.active ? '' : ' class="muted"'}><td>${escapeHtml(w.word)}</td>`
         + `<td>${w.score.toFixed(1)}</td><td class="gauge band-${w.band}">${w.gauge}</td>`
+        + `<td>${w.leitner_box ?? 1}</td><td>${nextReview}</td>`
         + `<td>${w.times_practiced}</td><td>${w.times_correct}</td><td>${w.times_incorrect}</td>`
         + `<td>${w.times_drilled}</td><td>${w.times_flagged}</td><td>${w.times_mastered}</td></tr>`;
     });
