@@ -31,16 +31,6 @@ flash-and-hide spelling test for "Learning", and the listening test for
 "Production" (since there's no definition to show), but still earns/loses the
 points for whichever band it's in.
 
-### Focused-batch learning
-
-Sessions use a **focused batch** approach rather than asking each word once
-and moving on. A small active batch of words (default: 4) is worked on
-simultaneously. Each turn, whichever word in the batch has the **lowest
-current score** is asked next (ties broken randomly). When a word reaches
-score 9 it graduates and the next word from the session pool is promoted into
-the batch. This continues until the session reaches 16 questions or the word
-list is exhausted.
-
 ```mermaid
 flowchart LR
     L["Learning\nscore 1-3"]
@@ -66,6 +56,80 @@ score: `@` master -> 9.0 (Production), `$` drill -> 5.0 (Audio), `!` flag ->
   `report --lang` run, no separate command needed.
 - Every session is logged (date, duration, words practiced, correct/incorrect,
   drilled count) so you can review your history with `report`.
+
+## How learning works
+
+Mashq combines two complementary systems to build long-term retention.
+
+### Score and question bands
+
+Every word carries a score from `1.0` (new/struggling) to `9.0` (mastered).
+Each practice answer moves the score up or down (see the table in [How it
+works](#how-it-works)), which in turn may shift the word into a harder or
+easier question band. The goal of each session is to push as many words as
+possible to score `9.0`.
+
+### Leitner spaced repetition (5-box system)
+
+Once a word is mastered (score = 9.0) it enters a **Leitner box** that
+controls how often it comes back for review:
+
+| Box | Review interval |
+|---|---|
+| Box 1 | every 1 day |
+| Box 2 | every 2 days |
+| Box 3 | every 4 days |
+| Box 4 | every 9 days |
+| Box 5 | every 14 days |
+
+- A word **advances one box** only when its score reaches exactly `9.0`
+  (mastery). Intermediate correct answers raise the score but leave the box
+  unchanged.
+- An **incorrect answer** resets the box to 1, so the word returns to daily
+  review until it's mastered again.
+- All new words start in Box 1. The box persists across sessions, so a word
+  you mastered last week might not appear today if its review interval hasn't
+  elapsed.
+
+The `report --lang` command shows the current box distribution and how many
+words are due today. The web UI word-list table shows each word's box and its
+next scheduled review date.
+
+### Session word priority
+
+Each session picks **up to 16 unique words**, each asked exactly once.
+Priority order within a session:
+
+1. **In-progress words** (score < 9) that are new, were practiced earlier
+   today, or are Leitner-due — ordered by **score descending** (closest to
+   mastery first). The same word can appear across multiple sessions on the
+   same day until it reaches score 9, because the day-goal is to maximise
+   the number of words that cross the mastery threshold.
+2. **Mastered words** (score = 9) whose Leitner interval has elapsed — review
+   filler, oldest review first.
+3. **Not-yet-due** words — last resort if the word list is very short.
+
+### Drill mode — fixing your worst mistakes
+
+Running with `--drill-mode` (or clicking **Drill** in the web UI) launches a
+targeted mistake-correction session:
+
+- The **10 words with the most recorded incorrect answers** are selected.
+- Every word goes through a **9-correct-in-a-row** repetition drill —
+  regardless of its score band — so you build real muscle memory, not just
+  momentary recall.
+- After completing the drill for a word, **one incorrect mark is erased**
+  from its history (`times_incorrect - 1`). Run the drill session again to
+  erase another, gradually clearing the record of words you've fixed.
+- Scores are never changed in drill mode; only `times_drilled` and
+  `times_incorrect` are updated.
+
+### Practice streak
+
+Every session is counted toward a **practice streak**. The `report` command
+(CLI and web UI) shows your current consecutive-day streak and your personal
+best. Practicing on any number of sessions in a day counts as one day toward
+the streak.
 
 ## Setup
 
@@ -276,8 +340,8 @@ flowchart TD
 | `--lang <name>` | Required. Which word list to practice (the full list identifier, e.g. `german_home`). |
 | `--no-audio` | Disable speaking each word aloud. On **macOS**, audio (via `say`) is **on by default**; this flag turns it off. Has no effect on other platforms, where audio is never available. |
 | `--audio-lang <lang>` | Override the language used for voice/TTS selection. Useful when `--lang` is a sub-list name like `german_home` that doesn't auto-detect as German: pass `--audio-lang german` to use the German `say` voice regardless. Accepts the same values as `--lang` (e.g. `german`, `de`). |
-| `--drill` | Drill mode: every word in the session goes through the 9-repetition drill automatically, regardless of its score band. |
-| `--drill-mode` | Review drill: practice your highest-scored words without changing their scores. Only `times_drilled` is incremented. Good for reinforcing words you already know well. |
+| `--drill` | Full drill: every word in the session goes through the 9-repetition drill automatically, regardless of its score band. |
+| `--drill-mode` | Mistake drill: selects the 10 words with the most incorrect answers and puts each through a 9-correct-in-a-row repetition. On success, one incorrect mark is removed from that word's history. Scores are not changed. |
 
 Run `./mashq.sh practice --help` (or `report`/`init --help`) at any
 time to see this same reference from the CLI itself.
@@ -305,10 +369,12 @@ time to see this same reference from the CLI itself.
 | `--user <name>` | Required. Username. |
 | `--lang <name>` | Optional. Limit the report to a single word list. Omit to see a separate report for each of the user's word lists. |
 
-Shows a per-day and total summary of sessions, time spent, words practiced,
-correct/incorrect/drilled counts, and average time per word. With `--lang`,
-this is a single table for that word list; without it, one such table is
-printed per language the user has practiced.
+- **Without `--lang`**: shows a cross-language **user overview** — daily
+  sessions, languages, time, words practiced, accuracy, and average
+  seconds-per-word — followed by a per-language breakdown. Your current and
+  best practice streaks are shown at the top.
+- **With `--lang`**: shows the per-language table plus the Leitner box
+  distribution and due-today count for that word list.
 
 ### Init
 
@@ -377,10 +443,12 @@ only). Open it in a browser for:
   (`!!` end, `!` flag, `@` master, `$` drill, `?` reveal, `+` replay audio).
   Audio is played via the browser's built-in Web Speech API
   (`speechSynthesis`), so no `say`/macOS dependency is needed.
-- **Report** - per-language daily and total summaries, same data as
-  `report --user`. Add a language to also see that word list's words,
-  current scores/gauges, and per-word practice stats (times practiced,
-  correct, incorrect, drilled, flagged, mastered).
+- **Report** - without a language filter: a user-level overview of all
+  sessions across every language (daily stats, accuracy, avg time per word,
+  streak). With a language: the per-language daily table plus the full word
+  list with each word's score, Leitner box, next scheduled review date, and
+  per-word practice stats (times practiced, correct, incorrect, drilled,
+  flagged, mastered).
 - **Word Lists** - see existing `<user>_<lang>` word lists, create new ones
   (equivalent to `init --user --lang`), and edit a list's words and
   definitions directly in the browser - saved straight to

@@ -16,6 +16,7 @@ import urllib.parse
 import http.server
 import uuid
 
+from datetime import date, timedelta
 import mashq as ll
 
 HOST = '127.0.0.1'
@@ -75,7 +76,7 @@ def gender_class(word_text):
     return 'none'
 
 
-def build_question(session, word_id, word_text, definition, score):
+def build_question(session, word_id, word_text, definition, score, leitner_box=1):
     band = ll.score_band(score)
     has_def = bool(definition)
     question = {
@@ -96,8 +97,8 @@ def build_question(session, word_id, word_text, definition, score):
         # Band 3: definition + audio → type the word (no more MCQ).
         question['type'] = 'production'
 
-    if session.get('drill_mode') and band < 3:
-        # Drill mode for lower-band words: pre-start a 9x repetition drill.
+    if session.get('drill_mode'):
+        # Drill mode: every word requires 9 correct in a row, regardless of band.
         initial_drill = {'correct_in_a_row': 0, 'repetition': 1}
         question['drill_start'] = {
             'word': word_text,
@@ -112,30 +113,26 @@ def build_question(session, word_id, word_text, definition, score):
         'word_text': word_text,
         'definition': definition,
         'score': score,
+        'leitner_box': leitner_box,
         'type': question['type'],
-        'drill': initial_drill,  # pre-initialized for drill-mode band 1/2; None otherwise
+        'drill': initial_drill,
     }
     return question
 
 
-BATCH_SIZE = ll.BATCH_SIZE
 MAX_QUESTIONS = ll.MAX_QUESTIONS
+DRILL_WORDS = ll.DRILL_WORDS
 
 
 # --- Session lifecycle ---
 def start_session(user, lang, audio_lang=None, drill_mode=False):
     ll.sync_word_list(user, lang)
-    words = ll.get_words_for_practice(user, lang, BATCH_SIZE + MAX_QUESTIONS, drill_mode=drill_mode)
+    words = ll.get_words_for_practice(user, lang, DRILL_WORDS if drill_mode else MAX_QUESTIONS, drill_mode=drill_mode)
     voice_lang = audio_lang or lang
 
-    n = min(BATCH_SIZE, len(words))
-    batch = [
-        {'word_id': r[0], 'word_text': r[1], 'definition': r[2], 'score': r[3]}
-        for r in words[:n]
-    ]
-    pool = [
-        {'word_id': r[0], 'word_text': r[1], 'definition': r[2], 'score': r[3]}
-        for r in words[n:]
+    queue = [
+        {'word_id': r[0], 'word_text': r[1], 'definition': r[2], 'score': r[3], 'leitner_box': r[4]}
+        for r in words
     ]
 
     session_id = uuid.uuid4().hex
@@ -143,13 +140,10 @@ def start_session(user, lang, audio_lang=None, drill_mode=False):
         'user': user,
         'lang': lang,
         'lang_locale': SPEECH_LOCALES.get(_resolve_locale(voice_lang), ''),
-        'batch': batch,
-        'pool': pool,
-        'total': len(words),
-        'graduated': 0,
+        'queue': queue,
+        'total': len(queue),
         'practiced': 0,
         'max_questions': MAX_QUESTIONS,
-        'last_word_id': None,
         'drill_mode': drill_mode,
         'correct': 0,
         'drilled': 0,
@@ -162,71 +156,12 @@ def start_session(user, lang, audio_lang=None, drill_mode=False):
 
 
 def next_question(session):
-    # Refill batch from pool whenever it dropped below BATCH_SIZE.
-    while len(session['batch']) < BATCH_SIZE and session['pool']:
-        session['batch'].append(session['pool'].pop(0))
-
-    batch = session['batch']
-
-    # If both batch and pool are exhausted, refetch from DB so we always
-    # reach MAX_QUESTIONS even when the word list is very short.
-    if not batch:
-        remaining = session['max_questions'] - session['practiced']
-        fresh = ll.get_words_for_practice(
-            session['user'], session['lang'],
-            max(BATCH_SIZE, BATCH_SIZE + remaining),
-            drill_mode=session.get('drill_mode', False))
-        if not fresh:
-            return None  # no words at all in the list
-        n = min(BATCH_SIZE, len(fresh))
-        session['batch'] = [
-            {'word_id': r[0], 'word_text': r[1], 'definition': r[2], 'score': r[3]}
-            for r in fresh[:n]
-        ]
-        session['pool'] = [
-            {'word_id': r[0], 'word_text': r[1], 'definition': r[2], 'score': r[3]}
-            for r in fresh[n:]
-        ]
-        session['last_word_id'] = None
-        batch = session['batch']
-
-    if not batch:
-        return None  # truly no words anywhere
-
-    # If only one word in batch and it was just asked (would repeat), fetch
-    # fresh words from DB to restore the no-repeat guarantee.
-    if len(batch) == 1 and not session['pool'] and batch[0]['word_id'] == session['last_word_id']:
-        existing_id = batch[0]['word_id']
-        remaining = max(BATCH_SIZE, session['max_questions'] - session['practiced'])
-        fresh = ll.get_words_for_practice(
-            session['user'], session['lang'], remaining,
-            drill_mode=session.get('drill_mode', False))
-        others = [r for r in fresh if r[0] != existing_id]
-        if others:
-            n = min(BATCH_SIZE - 1, len(others))
-            session['batch'].extend([
-                {'word_id': r[0], 'word_text': r[1], 'definition': r[2], 'score': r[3]}
-                for r in others[:n]
-            ])
-            session['pool'] = [
-                {'word_id': r[0], 'word_text': r[1], 'definition': r[2], 'score': r[3]}
-                for r in others[n:]
-            ]
-            session['last_word_id'] = None
-        batch = session['batch']
-
-    last_id = session['last_word_id']
-
-    # Pick lowest-scored word; never the same word as the previous question.
-    min_score = min(e['score'] for e in batch)
-    candidates = [e for e in batch if e['score'] == min_score]
-    without_last = [e for e in candidates if e['word_id'] != last_id]
-    if not without_last:
-        without_last = [e for e in batch if e['word_id'] != last_id]
-    entry = random.choice(without_last or candidates)
-    session['last_word_id'] = entry['word_id']
+    queue = session['queue']
+    if not queue:
+        return None
+    entry = queue.pop(0)
     return build_question(session, entry['word_id'], entry['word_text'],
-                          entry['definition'], entry['score'])
+                          entry['definition'], entry['score'], entry['leitner_box'])
 
 
 def finalize_session(session, ended_early=False):
@@ -246,10 +181,9 @@ def finalize_session(session, ended_early=False):
     }
 
 
-def advance(session, status, new_score, message, attempt=None):
+def advance(session, status, message, attempt=None):
     cur = session['current']
     word_text = cur['word_text']
-    word_id = cur['word_id']
     session['practiced'] += 1
     if status == 'correct':
         session['correct'] += 1
@@ -258,18 +192,7 @@ def advance(session, status, new_score, message, attempt=None):
     elif status == 'drilled':
         session['drilled'] += 1
 
-    # Update in-memory score; graduate if mastered.
     result = {'result': status, 'message': message, 'word': word_text}
-    for entry in session['batch']:
-        if entry['word_id'] == word_id:
-            entry['score'] = new_score
-            if new_score >= 9.0:
-                session['batch'].remove(entry)
-                session['graduated'] += 1
-                result['graduated'] = word_text
-                # Pool refill happens inside next_question(); nothing extra needed here.
-            break
-
     limit_reached = session['practiced'] >= session['max_questions']
     nxt = None if limit_reached else next_question(session)
     if nxt is None:
@@ -279,7 +202,7 @@ def advance(session, status, new_score, message, attempt=None):
         result['done'] = False
         result['question'] = nxt
         result['progress'] = {
-            'graduated': session['graduated'],
+            'correct': session['correct'],
             'total': session['total'],
             'questions': session['practiced'],
             'max_questions': session['max_questions'],
@@ -298,12 +221,10 @@ def process_drill_answer(session, answer):
         if drill['correct_in_a_row'] >= DRILL_TARGET:
             cur['drill'] = None
             if session.get('drill_mode'):
-                # Drill mode: record as drilled, never change score.
                 ll.record_as_drilled(session['user'], session['lang'], cur['word_id'])
-                return advance(session, 'drilled', cur['score'], "Drill complete.")
+                return advance(session, 'drilled', "Drill complete.")
             ll.update_word_score(session['user'], session['lang'], cur['word_id'], 'drilled')
-            return advance(session, 'drilled', ll.FIXED_SCORES['drilled'],
-                           "Drill complete. Score set to 5.0.")
+            return advance(session, 'drilled', "Drill complete. Score set to 5.0.")
         correct = True
     else:
         drill['correct_in_a_row'] = 0
@@ -351,34 +272,23 @@ def process_answer(session, answer):
     if answer.startswith('@'):
         if not session.get('drill_mode'):
             ll.update_word_score(session['user'], session['lang'], cur['word_id'], 'mastered')
-        return advance(session, 'mastered', ll.FIXED_SCORES['mastered'],
-                       f"Marked '{cur['word_text']}' as known.")
+        return advance(session, 'mastered', f"Marked '{cur['word_text']}' as known.")
 
     if answer.startswith('!'):
         if not session.get('drill_mode'):
             ll.update_word_score(session['user'], session['lang'], cur['word_id'], 'flagged')
-        return advance(session, 'flagged', ll.FIXED_SCORES['flagged'],
-                       f"Flagged '{cur['word_text']}' for more practice.")
+        return advance(session, 'flagged', f"Flagged '{cur['word_text']}' for more practice.")
 
     correct = ll.answer_matches(answer, cur['word_text'])
 
-    if session.get('drill_mode'):
-        # Drill mode: show correct/incorrect feedback but never change the score.
-        ll.record_as_drilled(session['user'], session['lang'], cur['word_id'])
-        msg = None if correct else f"Incorrect. The word was: {cur['word_text']}"
-        return advance(session, 'correct' if correct else 'incorrect',
-                       cur['score'], msg, attempt=answer)
-
     if correct:
-        ll.update_word_score(session['user'], session['lang'], cur['word_id'], 'correct', cur['score'])
-        new_score = min(9.0, cur['score'] + ll.SCORE_DELTAS[ll.score_band(cur['score'])])
-        return advance(session, 'correct', new_score, None, attempt=answer)
+        ll.update_word_score(session['user'], session['lang'], cur['word_id'],
+                             'correct', cur['score'], cur['leitner_box'])
+        return advance(session, 'correct', None, attempt=answer)
 
-    ll.update_word_score(session['user'], session['lang'], cur['word_id'], 'incorrect', cur['score'])
-    incorrect_delta = ll.BAND3_INCORRECT_DELTA if ll.score_band(cur['score']) == 3 else ll.INCORRECT_DELTA
-    new_score = max(1.0, cur['score'] - incorrect_delta)
-    return advance(session, 'incorrect', new_score,
-                   f"Incorrect. The word was: {cur['word_text']}", attempt=answer)
+    ll.update_word_score(session['user'], session['lang'], cur['word_id'],
+                         'incorrect', cur['score'], cur['leitner_box'])
+    return advance(session, 'incorrect', f"Incorrect. The word was: {cur['word_text']}", attempt=answer)
 
 
 # --- Word lists / report ---
@@ -452,6 +362,66 @@ def report_data(user, lang=None):
     return reports
 
 
+def user_summary_data(user):
+    """Return aggregate daily stats across all languages for the user."""
+    user_s = ll.sanitize_name(user, 'user')
+    table = f"sessions_{user_s}"
+    conn = ll.get_connection()
+    cursor = conn.execute("SELECT name FROM sqlite_master WHERE type='table' AND name = ?", (table,))
+    if cursor.fetchone() is None:
+        conn.close()
+        return None
+
+    rows = conn.execute(
+        f'SELECT session_date, COUNT(id), COUNT(DISTINCT language), '
+        f'SUM(duration_seconds), SUM(words_practiced), SUM(correct_count), SUM(incorrect_count) '
+        f'FROM "{table}" GROUP BY session_date ORDER BY session_date DESC'
+    ).fetchall()
+
+    all_dates = [r[0] for r in conn.execute(f'SELECT session_date FROM "{table}"').fetchall()]
+    current_streak, best_streak = ll.compute_streak(all_dates)
+
+    totals = conn.execute(
+        f'SELECT COUNT(id), COUNT(DISTINCT language), SUM(duration_seconds), '
+        f'SUM(words_practiced), SUM(correct_count), SUM(incorrect_count) '
+        f'FROM "{table}"'
+    ).fetchone()
+    conn.close()
+
+    days = []
+    for s_date, sessions, langs, seconds, practiced, correct, incorrect in rows:
+        total_ans = (correct or 0) + (incorrect or 0)
+        days.append({
+            'date': s_date,
+            'sessions': sessions,
+            'languages': langs,
+            'seconds': seconds or 0,
+            'practiced': practiced or 0,
+            'correct': correct or 0,
+            'incorrect': incorrect or 0,
+            'accuracy': round(100 * correct / total_ans, 1) if total_ans > 0 else None,
+            'avg_time': round(seconds / practiced, 1) if practiced else None,
+        })
+
+    t_sessions, t_langs, t_seconds, t_practiced, t_correct, t_incorrect = totals
+    t_total_ans = (t_correct or 0) + (t_incorrect or 0)
+    return {
+        'user': user_s,
+        'streak': {'current': current_streak, 'best': best_streak},
+        'days': days,
+        'total': {
+            'sessions': t_sessions,
+            'languages': t_langs,
+            'seconds': t_seconds or 0,
+            'practiced': t_practiced or 0,
+            'correct': t_correct or 0,
+            'incorrect': t_incorrect or 0,
+            'accuracy': round(100 * t_correct / t_total_ans, 1) if t_total_ans > 0 else None,
+            'avg_time': round(t_seconds / t_practiced, 1) if t_practiced else None,
+        },
+    }
+
+
 def word_list_stats(user, lang):
     table = ll.words_table_name(user, lang)
     conn = ll.get_connection()
@@ -461,19 +431,28 @@ def word_list_stats(user, lang):
         return None
     rows = conn.execute(
         f'SELECT text, score, active, times_practiced, times_correct, times_incorrect, '
-        f'times_drilled, times_flagged, times_mastered, last_practiced '
+        f'times_drilled, times_flagged, times_mastered, last_practiced, leitner_box '
         f'FROM "{table}" ORDER BY active DESC, score ASC, text ASC'
     ).fetchall()
     conn.close()
+    today = date.today()
     words = []
     for (text, score, active, practiced, correct, incorrect,
-         drilled, flagged, mastered, last_practiced) in rows:
+         drilled, flagged, mastered, last_practiced, leitner_box) in rows:
+        box = leitner_box or 1
+        if last_practiced:
+            interval = ll.LEITNER_INTERVALS.get(box, 1)
+            next_review = (date.fromisoformat(last_practiced) + timedelta(days=interval)).isoformat()
+        else:
+            next_review = None
         words.append({
             'word': text,
             'score': round(score, 1),
             'gauge': gauge_dots(score),
             'band': ll.score_band(score),
             'active': bool(active),
+            'leitner_box': box,
+            'next_review': next_review,
             'times_practiced': practiced,
             'times_correct': correct,
             'times_incorrect': incorrect,
@@ -598,6 +577,19 @@ class Handler(http.server.BaseHTTPRequestHandler):
             except ValueError as e:
                 return self._send_json({'error': str(e)}, 400)
 
+        if parsed.path == '/api/report/summary':
+            qs = urllib.parse.parse_qs(parsed.query)
+            user = qs.get('user', [''])[0]
+            if not user:
+                return self._send_json({'error': "'user' is required"}, 400)
+            try:
+                summary = user_summary_data(user)
+                if summary is None:
+                    return self._send_json({'summary': None})
+                return self._send_json({'summary': summary})
+            except ValueError as e:
+                return self._send_json({'error': str(e)}, 400)
+
         if parsed.path == '/api/wordlist':
             qs = urllib.parse.parse_qs(parsed.query)
             user = qs.get('user', [''])[0]
@@ -655,7 +647,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
                 'session_id': session_id,
                 'lang_locale': session['lang_locale'],
                 'progress': {
-                    'graduated': 0,
+                    'correct': 0,
                     'total': session['total'],
                     'questions': 0,
                     'max_questions': session['max_questions'],
