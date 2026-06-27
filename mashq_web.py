@@ -143,7 +143,7 @@ def start_session(user, lang, audio_lang=None, drill_mode=False):
         'queue': queue,
         'total': len(queue),
         'practiced': 0,
-        'max_questions': MAX_QUESTIONS,
+        'max_questions': DRILL_WORDS if drill_mode else MAX_QUESTIONS,
         'drill_mode': drill_mode,
         'correct': 0,
         'drilled': 0,
@@ -203,6 +203,7 @@ def advance(session, status, message, attempt=None):
         result['question'] = nxt
         result['progress'] = {
             'correct': session['correct'],
+            'drilled': session['drilled'],
             'total': session['total'],
             'questions': session['practiced'],
             'max_questions': session['max_questions'],
@@ -688,6 +689,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
                 'lang_locale': session['lang_locale'],
                 'progress': {
                     'correct': 0,
+                    'drilled': 0,
                     'total': session['total'],
                     'questions': 0,
                     'max_questions': session['max_questions'],
