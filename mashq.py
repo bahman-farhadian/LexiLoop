@@ -404,15 +404,18 @@ def update_word_score(user, lang, word_id, result_status, current_score=None, cu
 
 def get_words_for_practice(user, lang, num_words=MAX_QUESTIONS, drill_mode=False):
     """
-    Normal mode — Leitner priority:
-      1. Due today: last_practiced IS NULL or days elapsed >= box interval. Lowest score first.
-      2. Not yet due: filler when fewer than num_words are due. Lowest score first.
+    Normal mode — priority designed to maximise words reaching score 9 each day:
+      0. In-progress (score < 9) AND (new / practiced today / Leitner-due): score DESC.
+      1. Mastered (score 9) AND Leitner-due: review filler, oldest first.
+      2. Not-yet-due: last resort filler, score DESC.
+
+    Same-day re-practice is intentional: a word stays in group 0 across all
+    sessions on the same day until its score hits 9.
 
     Drill mode — highest score first, practiced words only (scores unchanged).
     """
     table = words_table_name(user, lang)
     conn = get_connection()
-    today = date.today().isoformat()
     if drill_mode:
         cursor = conn.execute(
             f'''SELECT id, text, definition, score, leitner_box FROM "{table}"
@@ -427,17 +430,25 @@ def get_words_for_practice(user, lang, num_words=MAX_QUESTIONS, drill_mode=False
                 WHERE active = 1
                 ORDER BY
                   CASE
-                    WHEN last_practiced IS NULL THEN 0
-                    WHEN julianday(?) - julianday(last_practiced) >=
+                    WHEN score < 9 AND (
+                      last_practiced IS NULL
+                      OR date(last_practiced) = date('now')
+                      OR julianday('now') - julianday(last_practiced) >=
                          CASE leitner_box WHEN 1 THEN 1 WHEN 2 THEN 2
                                           WHEN 3 THEN 4 WHEN 4 THEN 9 ELSE 14 END
-                    THEN 0
-                    ELSE 1
+                    ) THEN 0
+                    WHEN score >= 9 AND (
+                      last_practiced IS NULL
+                      OR julianday('now') - julianday(last_practiced) >=
+                         CASE leitner_box WHEN 1 THEN 1 WHEN 2 THEN 2
+                                          WHEN 3 THEN 4 WHEN 4 THEN 9 ELSE 14 END
+                    ) THEN 1
+                    ELSE 2
                   END,
-                  score ASC,
+                  score DESC,
                   last_practiced ASC
                 LIMIT ?''',
-            (today, num_words)
+            (num_words,)
         )
     rows = cursor.fetchall()
     conn.close()
@@ -917,17 +928,17 @@ def print_due_summary(conn, user, lang):
     table = words_table_name(user, lang)
     if not conn.execute("SELECT name FROM sqlite_master WHERE type='table' AND name=?", (table,)).fetchone():
         return
-    today = date.today().isoformat()
     rows = conn.execute(
         f'''SELECT leitner_box, COUNT(*) AS total,
-            SUM(CASE WHEN last_practiced IS NULL OR
-                julianday(?) - julianday(last_practiced) >=
-                CASE leitner_box WHEN 1 THEN 1 WHEN 2 THEN 2
-                                 WHEN 3 THEN 4 WHEN 4 THEN 9 ELSE 14 END
+            SUM(CASE WHEN last_practiced IS NULL
+                     OR date(last_practiced) = date('now')
+                     OR julianday('now') - julianday(last_practiced) >=
+                        CASE leitner_box WHEN 1 THEN 1 WHEN 2 THEN 2
+                                         WHEN 3 THEN 4 WHEN 4 THEN 9 ELSE 14 END
                 THEN 1 ELSE 0 END) AS due
             FROM "{table}" WHERE active = 1
             GROUP BY leitner_box ORDER BY leitner_box''',
-        (today,)
+        ()
     ).fetchall()
     if not rows:
         return
