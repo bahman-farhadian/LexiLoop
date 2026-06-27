@@ -202,7 +202,7 @@
     if (question.drill_start) {
       const q = progress.questions ?? 0;
       const maxQ = progress.max_questions ?? '?';
-      sessionProgress.textContent = `Correct ${progress.correct ?? 0}/${progress.total} · Q${q}/${maxQ}`;
+      sessionProgress.textContent = `Drilled ${progress.drilled ?? 0}/${progress.total} · Q${q}/${maxQ}`;
       sessionGauge.textContent = `${question.gauge} (score: ${question.score.toFixed(1)})`;
       sessionGauge.className = `gauge band-${question.band}`;
       sessionType.textContent = 'Drill';
